@@ -1,7 +1,7 @@
 # input: anthropic SDK, LLMPort 接口
-# output: AnthropicProvider LLM 实现
+# output: AnthropicProvider LLM 实现（含 prompt caching 支持）
 # owner: wanhua.gu
-# pos: 基础设施层 - Anthropic SDK LLM 提供者实现（Claude API）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
+# pos: 基础设施层 - Anthropic SDK LLM 提供者实现（Claude API + cache_control）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """Anthropic SDK implementation of LLMPort."""
 
 from __future__ import annotations
@@ -41,16 +41,24 @@ class AnthropicProvider:
 
     def _split_system_and_messages(
         self, messages: list[LLMMessage]
-    ) -> tuple[Optional[str], list[dict]]:
+    ) -> tuple[Optional[list[dict] | str], list[dict]]:
         """Extract system message and convert remaining to Anthropic format.
 
         Anthropic API takes system as a top-level parameter, not in messages.
+        System content is returned as a content-block list with cache_control
+        to enable prompt caching (up to 90% input token cost reduction).
         """
         system_content = None
         api_messages = []
         for m in messages:
             if m.role == "system":
-                system_content = m.content
+                system_content = [
+                    {
+                        "type": "text",
+                        "text": m.content,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
             else:
                 api_messages.append({"role": m.role, "content": m.content})
         return system_content, api_messages

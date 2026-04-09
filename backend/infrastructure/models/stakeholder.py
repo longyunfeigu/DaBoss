@@ -48,6 +48,8 @@ class ChatRoomModel(Base):
         nullable=True,
         comment="最后消息时间",
     )
+    context_summary = Column(Text, nullable=True, comment="历史消息压缩摘要")
+    summary_up_to_message_id = Column(Integer, nullable=True, comment="摘要覆盖到的最新消息ID")
 
     def __repr__(self) -> str:
         return f"<ChatRoomModel(id={self.id}, name='{self.name}', type='{self.type}')>"

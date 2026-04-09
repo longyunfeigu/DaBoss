@@ -108,15 +108,22 @@ async def get_stakeholder_chat_service(
     loader: PersonaLoader = Depends(get_persona_loader),
     llm: LLMPort = Depends(get_stakeholder_llm_port),
 ) -> StakeholderChatService:
+    from application.services.stakeholder.compression_service import CompressionService
     from application.services.stakeholder.dispatcher import Dispatcher
 
     dispatcher = Dispatcher(llm=llm, persona_loader=loader)
+    compression = CompressionService(
+        uow_factory=SQLAlchemyUnitOfWork,
+        llm=llm,
+        persona_loader=loader,
+    )
     return StakeholderChatService(
         uow_factory=SQLAlchemyUnitOfWork,
         persona_loader=loader,
         llm=llm,
         dispatcher=dispatcher,
         max_group_rounds=settings.stakeholder.max_group_rounds,
+        compression_service=compression,
     )
 
 

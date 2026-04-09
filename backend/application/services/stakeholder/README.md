@@ -14,11 +14,13 @@
 | `sse.py` | RoomEventBus — SSE 事件总线 + format_sse 格式化 |
 | `dispatcher.py` | Dispatcher — 群聊调度器，decide_responders() + check_followup() |
 | `analysis_service.py` | AnalysisService — LLM 智能对话分析报告生成（阻力排名 + 有效论点 + 沟通建议） |
+| `compression_service.py` | CompressionService — 后台对话历史语义压缩（异步增量摘要，不阻塞聊天） |
 
 ## 依赖关系
 
 - `chatroom_service.py` 依赖 `ChatRoomDomainService`（领域规则）、`PersonaLoader`（角色存在性验证）、`UnitOfWork`（事务）
-- `stakeholder_chat_service.py` 依赖 `UnitOfWork`、`PersonaLoader`、`LLMPort`、`prompt_builder`、`RoomEventBus`
+- `stakeholder_chat_service.py` 依赖 `UnitOfWork`、`PersonaLoader`、`LLMPort`、`prompt_builder`、`RoomEventBus`、`CompressionService`
+- `compression_service.py` 依赖 `UnitOfWork`、`LLMPort`（压缩摘要生成）、`PersonaLoader`（发言者名称解析）
 - `dispatcher.py` 依赖 `LLMPort`（调度决策 LLM 调用）、`PersonaLoader`（角色画像摘要）
 - `persona_loader.py` 依赖文件系统（读取 `data/personas/*.md`）
 - `analysis_service.py` 依赖 `UnitOfWork`、`LLMPort`（分析生成）、`PersonaLoader`（角色信息）

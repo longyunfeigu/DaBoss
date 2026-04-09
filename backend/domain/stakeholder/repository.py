@@ -34,6 +34,11 @@ class ChatRoomRepository(ABC):
     @abstractmethod
     async def delete(self, room_id: int) -> bool: ...
 
+    @abstractmethod
+    async def update_context_summary(
+        self, room_id: int, summary: str, up_to_message_id: int
+    ) -> None: ...
+
 
 class MessageRepository(ABC):
     """Contract for persisting and querying stakeholder chat messages."""
@@ -45,6 +50,9 @@ class MessageRepository(ABC):
     async def list_by_room_id(
         self, room_id: int, *, skip: int = 0, limit: int = 50
     ) -> list[Message]: ...
+
+    @abstractmethod
+    async def count_by_room_id(self, room_id: int) -> int: ...
 
 
 class ScenarioRepository(ABC):

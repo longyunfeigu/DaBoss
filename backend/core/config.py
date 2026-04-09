@@ -157,6 +157,8 @@ class StakeholderSettings(BaseModel):
     model: str = "claude-opus-4-0-20250514"
     persona_dir: str = "data/personas"
     max_group_rounds: int = 20
+    context_window_size: int = 20
+    compression_threshold: int = 20
 
 
 class Settings(BaseSettings):

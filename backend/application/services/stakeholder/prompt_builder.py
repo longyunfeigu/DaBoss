@@ -1,7 +1,7 @@
-# input: persona full_content, 对话历史, is_mentioned 标记, scenario_context 场景上下文
-# output: build_llm_messages() 私聊 prompt, build_group_llm_messages() 群聊 prompt（区分当前角色 vs 其他角色, @提及增强, 场景上下文注入）
+# input: persona full_content, 对话历史, is_mentioned 标记, scenario_context 场景上下文, context_summary 压缩摘要
+# output: build_llm_messages() 私聊 prompt, build_group_llm_messages() 群聊 prompt, build_compressed_llm_messages() / build_compressed_group_llm_messages() 三区压缩 prompt
 # owner: wanhua.gu
-# pos: 应用层 - 利益相关者对话 prompt 构建器（私聊 + 群聊）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
+# pos: 应用层 - 利益相关者对话 prompt 构建器（私聊 + 群聊 + 三区压缩）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """Build LLM messages from persona profile and conversation history."""
 
 from __future__ import annotations
@@ -221,5 +221,121 @@ def build_group_llm_messages(
         else:
             # User messages → user with label to distinguish from persona messages
             messages.append({"role": "user", "content": f"（用户发言）{content}"})
+
+    return system, messages
+
+
+def _inject_summary(messages: list[dict], context_summary: str | None) -> None:
+    """Insert compressed history as a user/assistant pair at the start of messages.
+
+    Uses a pair to maintain the alternating user/assistant pattern required
+    by Claude API, while keeping Zone 1 (system prompt) stable for caching.
+    """
+    if context_summary:
+        messages.insert(
+            0,
+            {
+                "role": "assistant",
+                "content": "好的，我已了解之前的对话背景。请继续。",
+            },
+        )
+        messages.insert(
+            0,
+            {
+                "role": "user",
+                "content": f"[对话历史摘要，截至此前的对话]\n{context_summary}",
+            },
+        )
+
+
+def build_compressed_llm_messages(
+    *,
+    persona_full_content: str,
+    persona_name: str,
+    history: list[dict],
+    context_summary: str | None = None,
+    context_window_size: int = 20,
+    scenario_context: str | None = None,
+    org_context: str | None = None,
+) -> tuple[str, list[dict]]:
+    """Build three-zone prompt: stable system + compressed history + recent window.
+
+    Zone 1 (system prompt) is identical to build_llm_messages — stable for caching.
+    Zone 2 inserts context_summary as a user/assistant pair.
+    Zone 3 uses only the last context_window_size messages.
+    """
+    system = _SYSTEM_TEMPLATE.format(
+        name=persona_name,
+        persona_content=persona_full_content,
+    )
+    system = _append_org_context(system, org_context)
+    system += _ROLE_BEHAVIOR_INSTRUCTION
+    system = _append_scenario_context(system, scenario_context)
+    system = _append_emotion_instruction(system)
+
+    # Zone 3: recent window only
+    recent = history[-context_window_size:] if len(history) > context_window_size else history
+    messages = []
+    for msg in recent:
+        sender = msg["sender_type"]
+        if sender == "system":
+            continue
+        role = "assistant" if sender == "persona" else "user"
+        messages.append({"role": role, "content": msg["content"]})
+
+    # Zone 2: prepend compressed summary
+    _inject_summary(messages, context_summary)
+
+    return system, messages
+
+
+def build_compressed_group_llm_messages(
+    *,
+    persona_full_content: str,
+    persona_name: str,
+    persona_id: str,
+    history: list[dict],
+    context_summary: str | None = None,
+    context_window_size: int = 20,
+    is_mentioned: bool = False,
+    scenario_context: str | None = None,
+    org_context: str | None = None,
+) -> tuple[str, list[dict]]:
+    """Build three-zone group-chat prompt with compressed history."""
+    system = _GROUP_SYSTEM_TEMPLATE.format(
+        name=persona_name,
+        persona_content=persona_full_content,
+    )
+    system = _append_org_context(system, org_context)
+    system += _ROLE_BEHAVIOR_INSTRUCTION
+    system = _append_scenario_context(system, scenario_context)
+    system = _append_emotion_instruction(system)
+
+    if is_mentioned:
+        system += (
+            "\n\n注意：用户在群聊中直接 @了你，表示特别想听你的观点。"
+            "请优先、具体地回应用户的问题。"
+        )
+
+    # Zone 3: recent window only
+    recent = history[-context_window_size:] if len(history) > context_window_size else history
+    messages = []
+    for msg in recent:
+        sender_type = msg["sender_type"]
+        if sender_type == "system":
+            continue
+
+        sender_id = msg.get("sender_id", "")
+        content = msg["content"]
+
+        if sender_type == "persona" and sender_id == persona_id:
+            messages.append({"role": "assistant", "content": content})
+        elif sender_type == "persona":
+            messages.append({"role": "user", "content": f"（其他角色 {sender_id} 发言）{content}"})
+        else:
+            messages.append({"role": "user", "content": f"（用户发言）{content}"})
+
+    # Zone 2: prepend compressed summary
+    _inject_summary(messages, context_summary)
 
     return system, messages

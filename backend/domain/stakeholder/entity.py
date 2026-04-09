@@ -39,6 +39,8 @@ class ChatRoom:
     scenario_id: Optional[int] = None
     created_at: Optional[datetime] = None
     last_message_at: Optional[datetime] = None
+    context_summary: Optional[str] = None
+    summary_up_to_message_id: Optional[int] = None
 
     def __post_init__(self) -> None:
         if self.type not in _ROOM_TYPES:

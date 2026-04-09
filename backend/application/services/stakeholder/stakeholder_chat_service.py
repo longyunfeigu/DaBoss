@@ -1,7 +1,7 @@
-# input: AbstractUnitOfWork, LLMPort, PersonaLoader, Dispatcher, prompt_builder, RoomEventBus
-# output: StakeholderChatService 私聊 + 群聊消息发送与 AI 流式回复编排 + SSE 事件推送（含 streaming_delta）, _extract_mentions() @提及解析
+# input: AbstractUnitOfWork, LLMPort, PersonaLoader, Dispatcher, CompressionService, prompt_builder, RoomEventBus
+# output: StakeholderChatService 私聊 + 群聊消息发送与 AI 流式回复编排 + SSE 事件推送（含 streaming_delta）+ 后台历史压缩, _extract_mentions() @提及解析
 # owner: wanhua.gu
-# pos: 应用层服务 - 利益相关者消息用例编排（私聊 + 群聊多轮调度）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
+# pos: 应用层服务 - 利益相关者消息用例编排（私聊 + 群聊多轮调度 + 三区压缩上下文）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """Application service for stakeholder chat messaging with SSE events.
 
 Handles both private (1:1) and group chat orchestration.
@@ -24,10 +24,11 @@ from typing import Callable
 from application.ports.llm import LLMMessage
 from application.services.stakeholder.dto import MessageDTO
 from application.services.stakeholder.prompt_builder import (
-    build_group_llm_messages,
-    build_llm_messages,
+    build_compressed_group_llm_messages,
+    build_compressed_llm_messages,
     build_org_context,
 )
+from core.config import settings
 from application.services.stakeholder.sse import room_event_bus
 from domain.common.exceptions import BusinessException
 from domain.common.unit_of_work import AbstractUnitOfWork
@@ -89,12 +90,14 @@ class StakeholderChatService:
         llm,
         dispatcher=None,
         max_group_rounds: int = 20,
+        compression_service=None,
     ) -> None:
         self._uow_factory = uow_factory
         self._persona_loader = persona_loader
         self._llm = llm
         self._dispatcher = dispatcher
         self._max_group_rounds = max_group_rounds
+        self._compression = compression_service
 
     async def send_message(self, room_id: int, content: str) -> tuple[MessageDTO, ChatRoom]:
         """Save user message (committed immediately). Returns (dto, room) for background reply generation."""
@@ -265,22 +268,32 @@ class StakeholderChatService:
                         for m in history_entities
                     ]
 
-                # Build prompt (group vs private)
+                # Load room for compression state
+                room = await uow.chat_room_repository.get_by_id(room_id)
+
+                # Build prompt (group vs private) with three-zone compression
+                window_size = settings.stakeholder.context_window_size
+                summary = room.context_summary if room else None
+
                 if group_mode:
-                    system_prompt, llm_messages = build_group_llm_messages(
+                    system_prompt, llm_messages = build_compressed_group_llm_messages(
                         persona_full_content=persona.full_content,
                         persona_name=persona.name,
                         persona_id=persona_id,
                         history=history,
+                        context_summary=summary,
+                        context_window_size=window_size,
                         is_mentioned=is_mentioned,
                         scenario_context=scenario_context,
                         org_context=org_ctx,
                     )
                 else:
-                    system_prompt, llm_messages = build_llm_messages(
+                    system_prompt, llm_messages = build_compressed_llm_messages(
                         persona_full_content=persona.full_content,
                         persona_name=persona.name,
                         history=history,
+                        context_summary=summary,
+                        context_window_size=window_size,
                         scenario_context=scenario_context,
                         org_context=org_ctx,
                     )
@@ -349,6 +362,16 @@ class StakeholderChatService:
                 "sender_id": saved_reply.sender_id,
                 "content": saved_reply.content,
             }
+
+            # Trigger background compression (fire-and-forget, non-blocking).
+            # In group_mode, compression is triggered once at the end of
+            # _orchestrate_group_chat instead of after each persona reply.
+            if self._compression and reply_content and not group_mode:
+                asyncio.create_task(
+                    self._safe_compress(room_id),
+                    name=f"compress-room-{room_id}",
+                )
+
             return reply_content is not None, saved_msg_dict
 
         except Exception:
@@ -362,6 +385,13 @@ class StakeholderChatService:
                 persona_id,
             )
             return False, None
+
+    async def _safe_compress(self, room_id: int) -> None:
+        """Run compression in background, swallowing errors."""
+        try:
+            await self._compression.maybe_compress(room_id)
+        except Exception:
+            logger.exception("Background compression failed for room %d", room_id)
 
     async def _orchestrate_group_chat(
         self, room: ChatRoom, *, scenario_context: str | None = None
@@ -517,6 +547,13 @@ class StakeholderChatService:
                 await uow.chat_room_repository.update_last_message_at(room_id, saved_sys.timestamp)
                 sys_dto = MessageDTO.model_validate(saved_sys)
                 await room_event_bus.publish(room_id, "message", sys_dto.model_dump(mode="json"))
+
+        # Trigger background compression once after all group replies
+        if self._compression and round_count > 0:
+            asyncio.create_task(
+                self._safe_compress(room_id),
+                name=f"compress-room-{room_id}",
+            )
 
         # Always emit round_end with dispatch transparency data
         await room_event_bus.publish(

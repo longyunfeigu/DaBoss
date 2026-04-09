@@ -269,7 +269,7 @@ class TestBuildGroupLlmMessages:
             history=history,
         )
         assert messages[0]["role"] == "user"
-        assert messages[0]["content"] == "Question?"
+        assert messages[0]["content"] == "（用户发言）Question?"
 
 
 # ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func as sa_func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.stakeholder.entity import (
@@ -53,6 +53,8 @@ class SQLAlchemyChatRoomRepository(ChatRoomRepository):
             scenario_id=model.scenario_id,
             created_at=model.created_at,
             last_message_at=model.last_message_at,
+            context_summary=model.context_summary,
+            summary_up_to_message_id=model.summary_up_to_message_id,
         )
 
     async def create(self, room: ChatRoom) -> ChatRoom:
@@ -101,6 +103,19 @@ class SQLAlchemyChatRoomRepository(ChatRoomRepository):
         await self.session.flush()
         return result.rowcount > 0
 
+    async def update_context_summary(
+        self, room_id: int, summary: str, up_to_message_id: int
+    ) -> None:
+        await self.session.execute(
+            update(ChatRoomModel)
+            .where(ChatRoomModel.id == room_id)
+            .values(
+                context_summary=summary,
+                summary_up_to_message_id=up_to_message_id,
+            )
+        )
+        await self.session.flush()
+
 
 class SQLAlchemyStakeholderMessageRepository(MessageRepository):
     """Persist stakeholder chat messages using SQLAlchemy ORM."""
@@ -147,6 +162,14 @@ class SQLAlchemyStakeholderMessageRepository(MessageRepository):
         )
         result = await self.session.execute(query)
         return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def count_by_room_id(self, room_id: int) -> int:
+        result = await self.session.execute(
+            select(sa_func.count())
+            .select_from(StakeholderMessageModel)
+            .where(StakeholderMessageModel.room_id == room_id)
+        )
+        return result.scalar_one()
 
 
 class SQLAlchemyScenarioRepository(ScenarioRepository):
