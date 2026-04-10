@@ -2,7 +2,7 @@
 
 ## Context
 
-当前 StakeCoachAI 的角色（Persona）是孤岛——不知道公司做什么、其他角色是谁、和自己什么关系。这导致群聊中角色不会"配合"或"对立"，Coach 复盘也无法从组织政治角度给建议。
+当前 DaBoss 的角色（Persona）是孤岛——不知道公司做什么、其他角色是谁、和自己什么关系。这导致群聊中角色不会"配合"或"对立"，Coach 复盘也无法从组织政治角度给建议。
 
 本阶段目标：引入 Organization / Team / PersonaRelationship 三个实体，让角色拥有组织归属和人际关系，并将这些信息注入 LLM prompt，使对话和复盘具备组织感知能力。
 
