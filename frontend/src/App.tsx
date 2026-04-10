@@ -137,6 +137,7 @@ function App() {
   const audioPlayerRef = useRef<AudioPlayQueue | null>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const eventSourceVersionRef = useRef(0)
 
   // Initialize audio player
   useEffect(() => {
@@ -195,10 +196,15 @@ function App() {
       eventSourceRef.current = null
     }
 
+    const streamVersion = eventSourceVersionRef.current + 1
+    eventSourceVersionRef.current = streamVersion
     const es = new EventSource(`${API_BASE}/rooms/${selectedRoomId}/stream`)
     eventSourceRef.current = es
+    const isCurrentStream = () =>
+      eventSourceRef.current === es && eventSourceVersionRef.current === streamVersion
 
     es.addEventListener('message', (e) => {
+      if (!isCurrentStream()) return
       const msg: Message = JSON.parse(e.data)
       // Clear streaming content for this persona -- the final message replaces it
       if (msg.sender_type === 'persona') {
@@ -219,6 +225,7 @@ function App() {
     })
 
     es.addEventListener('streaming_delta', (e) => {
+      if (!isCurrentStream()) return
       const data: { persona_id: string; delta: string } = JSON.parse(e.data)
       setStreamingContent((prev) => ({
         ...prev,
@@ -228,6 +235,7 @@ function App() {
     })
 
     es.addEventListener('typing', (e) => {
+      if (!isCurrentStream()) return
       const data = JSON.parse(e.data)
       if (data.status === 'start') {
         setTypingPersona(data.persona_id)
@@ -243,15 +251,19 @@ function App() {
     })
 
     es.addEventListener('audio_chunk', (e) => {
+      if (!isCurrentStream()) return
       if (audioPlayerRef.current && !audioPlayerRef.current.isMuted()) {
         const data = JSON.parse(e.data)
         if (data.data) {
-          audioPlayerRef.current.enqueue(data.persona_id, data.data)
+          audioPlayerRef.current.enqueue(
+            data.persona_id, data.data, data.reply_id, data.sentence_index,
+          )
         }
       }
     })
 
     es.addEventListener('round_end', (e) => {
+      if (!isCurrentStream()) return
       setTypingPersona(null)
       setStreamingContent({})
       try {
@@ -266,12 +278,16 @@ function App() {
     })
 
     es.onerror = () => {
+      if (!isCurrentStream()) return
       setTypingPersona(null)
     }
 
     return () => {
+      eventSourceVersionRef.current += 1
       es.close()
-      eventSourceRef.current = null
+      if (eventSourceRef.current === es) {
+        eventSourceRef.current = null
+      }
       setTypingPersona(null)
       setStreamingContent({})
     }
@@ -999,9 +1015,23 @@ function App() {
                 <VoiceRecorder
                   roomId={selectedRoomId}
                   disabled={sending}
-                  onTranscription={(text) => {
-                    // Show transcribed text in input (user can see what was said)
+                  onTranscription={async (text) => {
                     setInputValue(text)
+                    if (text.trim() && selectedRoomId && !sending) {
+                      setSending(true)
+                      setDispatchSummary(null)
+                      audioPlayerRef.current?.stop()
+                      try {
+                        await sendMessage(selectedRoomId, text.trim())
+                        setInputValue('')
+                        setRefreshKey((k) => k + 1)
+                        setTimeout(scrollToBottom, 100)
+                      } catch (e) {
+                        console.error('Voice auto-send failed:', e)
+                      } finally {
+                        setSending(false)
+                      }
+                    }
                   }}
                 />
               )}

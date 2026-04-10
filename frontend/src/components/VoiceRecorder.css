@@ -52,6 +52,12 @@
   color: var(--text-secondary, #5a6b5d);
 }
 
+.voice-error {
+  font-size: 12px;
+  color: #e53e3e;
+  white-space: nowrap;
+}
+
 @keyframes pulse-recording {
   0%, 100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(229, 62, 62, 0); }

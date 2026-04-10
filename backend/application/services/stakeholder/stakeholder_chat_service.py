@@ -19,6 +19,7 @@ import asyncio
 import logging
 import json
 import re
+import uuid
 from typing import Callable
 
 from application.ports.llm import LLMMessage
@@ -314,10 +315,12 @@ class StakeholderChatService:
                     sentence_buf = None
                     tts_tasks: list[asyncio.Task] = []
                     audio_index = 0
+                    tts_reply_id = ""
                     if tts_enabled:
                         from application.services.stakeholder.sentence_buffer import SentenceBuffer
 
                         sentence_buf = SentenceBuffer()
+                        tts_reply_id = uuid.uuid4().hex[:12]
 
                     async for chunk in self._llm.stream(all_messages):
                         if chunk.content:
@@ -334,7 +337,8 @@ class StakeholderChatService:
                                 if sentence:
                                     task = asyncio.create_task(
                                         self._synthesize_and_push(
-                                            room_id, persona_id, persona, sentence, audio_index
+                                            room_id, persona_id, persona,
+                                            sentence, audio_index, tts_reply_id,
                                         )
                                     )
                                     tts_tasks.append(task)
@@ -346,7 +350,8 @@ class StakeholderChatService:
                         if remaining:
                             task = asyncio.create_task(
                                 self._synthesize_and_push(
-                                    room_id, persona_id, persona, remaining, audio_index
+                                    room_id, persona_id, persona,
+                                    remaining, audio_index, tts_reply_id,
                                 )
                             )
                             tts_tasks.append(task)
@@ -434,6 +439,7 @@ class StakeholderChatService:
         persona,
         text: str,
         index: int,
+        reply_id: str = "",
     ) -> None:
         """Synthesize a sentence via TTS and push audio chunks via SSE.
 
@@ -443,6 +449,12 @@ class StakeholderChatService:
         import base64
 
         from application.ports.tts import TTSConfig
+
+        # Strip emotion tags — they arrive as trailing <!--emotion:{...}-->
+        # and must not be spoken aloud.
+        text = _EMOTION_RE.sub("", text).strip()
+        if not text:
+            return
 
         try:
             config = TTSConfig(
@@ -464,6 +476,7 @@ class StakeholderChatService:
                         "persona_id": persona_id,
                         "data": base64.b64encode(complete_audio).decode("ascii"),
                         "sentence_index": index,
+                        "reply_id": reply_id,
                         "sentence_final": True,
                     },
                 )

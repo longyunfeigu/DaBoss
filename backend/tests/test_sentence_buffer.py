@@ -75,3 +75,35 @@ class TestSentenceBuffer:
         if remaining:
             results.append(remaining)
         assert results == ["你好，我是技术总监。", "关于预算"]
+
+    def test_emotion_tag_stripped_on_flush(self):
+        """Emotion tag at end of LLM output should not be emitted."""
+        buf = SentenceBuffer()
+        sentences = _feed_text(buf, '好的，我理解了。<!--emotion:{"score":3,"label":"认可"}-->')
+        assert sentences == ["好的，我理解了。"]
+
+    def test_emotion_tag_only(self):
+        """If the only remaining content is an emotion tag, flush returns None."""
+        buf = SentenceBuffer()
+        sentences = _feed_text(buf, '<!--emotion:{"score":-2,"label":"不满"}-->')
+        assert sentences == []
+
+    def test_emotion_tag_after_sentence(self):
+        """Emotion tag following a sentence boundary is stripped."""
+        buf = SentenceBuffer()
+        text = '这个方案很好！我非常支持。<!--emotion:{"score":5,"label":"支持"}-->'
+        sentences = _feed_text(buf, text)
+        assert sentences == ["这个方案很好！", "我非常支持。"]
+
+    def test_partial_emotion_tag_held(self):
+        """Partial emotion tag should be held in buffer, not emitted."""
+        buf = SentenceBuffer()
+        # Simulate tokens arriving one-by-one including partial tag
+        result = buf.feed("好的，收到了。")
+        assert result == "好的，收到了。"
+        result = buf.feed("<!--emot")
+        assert result is None  # Held because of partial tag
+        result = buf.feed('ion:{"score":1,"label":"ok"}-->')
+        assert result is None  # Complete tag, but nothing meaningful left
+        remaining = buf.flush()
+        assert remaining is None

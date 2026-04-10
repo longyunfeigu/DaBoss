@@ -42,6 +42,36 @@ def _extract_group_id_from_jwt(api_key: str) -> str | None:
         return None
 
 
+def _normalize_stream_audio(audio_hex: str, previous_hex: str) -> tuple[bytes | None, str]:
+    """Normalize MiniMax streaming audio payloads into incremental bytes.
+
+    MiniMax's HTTP streaming endpoint may emit either:
+    1. incremental audio chunks, or
+    2. repeated / cumulative snapshots of the full audio generated so far.
+
+    To keep downstream playback stable, convert cumulative snapshots into the
+    newly appended suffix and skip exact duplicates.
+    """
+    if not audio_hex:
+        return None, previous_hex
+
+    if previous_hex and audio_hex == previous_hex:
+        return None, previous_hex
+
+    normalized_hex = audio_hex
+    if previous_hex and audio_hex.startswith(previous_hex):
+        normalized_hex = audio_hex[len(previous_hex) :]
+
+    if not normalized_hex:
+        return None, audio_hex
+
+    try:
+        return bytes.fromhex(normalized_hex), audio_hex
+    except ValueError:
+        logger.warning("minimax_tts_hex_decode_error")
+        return None, previous_hex
+
+
 class MinimaxTTSProvider:
     """MiniMax TTS provider with HTTP streaming support."""
 
@@ -114,9 +144,16 @@ class MinimaxTTSProvider:
                 )
                 raise RuntimeError(f"MiniMax TTS request failed with status {response.status_code}")
 
-            # MiniMax streaming returns newline-delimited JSON, each containing
-            # hex-encoded audio in data.audio and status in data.status
+            # MiniMax streaming returns newline-delimited JSON with status codes.
+            # In real responses, status=1 frames are partial stream fragments,
+            # while status=2 carries the final complete audio snapshot. Because
+            # the application layer only forwards a single complete mp3 per
+            # sentence, prefer status=2 and only fall back to incremental parts
+            # if the final snapshot is missing.
             buffer = b""
+            last_audio_hex = ""
+            fallback_parts: list[bytes] = []
+            emitted_final = False
             async for raw_chunk in response.aiter_bytes():
                 buffer += raw_chunk
                 # Process complete lines
@@ -147,13 +184,25 @@ class MinimaxTTSProvider:
 
                     # Extract hex-encoded audio
                     data = chunk_data.get("data", {})
+                    status = data.get("status")
                     audio_hex = data.get("audio")
                     if audio_hex:
-                        try:
-                            audio_bytes = bytes.fromhex(audio_hex)
-                            yield audio_bytes
-                        except ValueError:
-                            logger.warning("minimax_tts_hex_decode_error")
+                        if status == 2:
+                            final_audio, _ = _normalize_stream_audio(audio_hex, "")
+                            if final_audio:
+                                emitted_final = True
+                                yield final_audio
+                            continue
+
+                        audio_bytes, last_audio_hex = _normalize_stream_audio(
+                            audio_hex,
+                            last_audio_hex,
+                        )
+                        if audio_bytes:
+                            fallback_parts.append(audio_bytes)
+
+            if not emitted_final and fallback_parts:
+                yield b"".join(fallback_parts)
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""

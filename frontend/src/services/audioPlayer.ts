@@ -3,6 +3,7 @@
  *
  * Receives base64-encoded mp3 chunks from SSE audio_chunk events,
  * decodes them, and plays one after another using Web Audio API.
+ * Deduplicates by (reply_id, sentence_index) to prevent double playback.
  */
 
 type QueueItem = {
@@ -17,6 +18,8 @@ export class AudioPlayQueue {
   private audioContext: AudioContext | null = null
   private currentSource: AudioBufferSourceNode | null = null
   private onPlayingChange?: (playing: boolean, personaId: string | null) => void
+  /** Track seen (reply_id:sentence_index) keys to prevent duplicate playback. */
+  private seenChunks = new Set<string>()
 
   constructor(opts?: { onPlayingChange?: (playing: boolean, personaId: string | null) => void }) {
     this.onPlayingChange = opts?.onPlayingChange
@@ -40,8 +43,15 @@ export class AudioPlayQueue {
     return this.muted
   }
 
-  enqueue(personaId: string, base64Data: string): void {
+  enqueue(personaId: string, base64Data: string, replyId?: string, sentenceIndex?: number): void {
     if (this.muted || !base64Data) return
+
+    // Deduplicate: skip if we've already enqueued this exact chunk
+    if (replyId) {
+      const key = `${replyId}:${sentenceIndex ?? 0}`
+      if (this.seenChunks.has(key)) return
+      this.seenChunks.add(key)
+    }
 
     try {
       const binary = atob(base64Data)
@@ -60,6 +70,7 @@ export class AudioPlayQueue {
 
   stop(): void {
     this.queue = []
+    this.seenChunks.clear()
     if (this.currentSource) {
       try {
         this.currentSource.stop()

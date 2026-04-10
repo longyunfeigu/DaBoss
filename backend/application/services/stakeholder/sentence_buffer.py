@@ -10,12 +10,25 @@ rather than waiting for the entire reply to finish.
 
 from __future__ import annotations
 
+import re
 
 # Punctuation marks that indicate a sentence boundary
 _SENTENCE_ENDS = frozenset("。！？；.!?\n")
 
 # Minimum characters before we consider emitting (avoids tiny fragments)
 _MIN_SENTENCE_LEN = 4
+
+# Matches a complete emotion tag: <!--emotion:{...}-->
+_EMOTION_TAG_RE = re.compile(r"<!--emotion:\s*\{.*?\}\s*-->", re.DOTALL)
+# Matches a partial/incomplete emotion tag at the end of a string
+_EMOTION_PARTIAL_RE = re.compile(r"<!--emotion:.*$", re.DOTALL)
+
+
+def _strip_emotion(text: str) -> str:
+    """Remove complete and partial emotion tags from text."""
+    text = _EMOTION_TAG_RE.sub("", text)
+    text = _EMOTION_PARTIAL_RE.sub("", text)
+    return text.strip()
 
 
 class SentenceBuffer:
@@ -33,10 +46,15 @@ class SentenceBuffer:
         """
         self._buffer += token
 
+        # If an emotion tag is starting to accumulate, hold it in the buffer
+        # and don't emit — it will be stripped on flush or once complete.
+        if "<!--" in self._buffer and "-->" not in self._buffer:
+            return None
+
         # Check for newline boundary (split on first newline)
         if "\n" in self._buffer:
             before, after = self._buffer.split("\n", 1)
-            before = before.strip()
+            before = _strip_emotion(before)
             if before and len(before) >= self._min_length:
                 self._buffer = after
                 return before
@@ -48,7 +66,8 @@ class SentenceBuffer:
         stripped = self._buffer.strip()
         if stripped and stripped[-1] in _SENTENCE_ENDS and len(stripped) >= self._min_length:
             self._buffer = ""
-            return stripped
+            result = _strip_emotion(stripped)
+            return result if result else None
         return None
 
     def flush(self) -> str | None:
@@ -56,7 +75,7 @@ class SentenceBuffer:
 
         Returns any remaining text, or None if the buffer is empty.
         """
-        remaining = self._buffer.strip()
+        remaining = _strip_emotion(self._buffer)
         self._buffer = ""
         if remaining:
             return remaining

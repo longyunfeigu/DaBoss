@@ -24,11 +24,14 @@ const API_PREFIX = '/api/v1/stakeholder'
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTranscription }) => {
   const [state, setState] = useState<RecordState>('idle')
   const [duration, setDuration] = useState(0)
+  const [error, setError] = useState<string | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number>(0)
   const holdModeRef = useRef(false)
+  const startingRef = useRef(false)
+  const pendingSendsRef = useRef(0)
   const chunksRef = useRef<Blob[]>([])
 
   // Cleanup on unmount
@@ -75,6 +78,17 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTrans
           const msg = JSON.parse(e.data)
           if (msg.type === 'transcription' && msg.is_final && msg.text) {
             onTranscription?.(msg.text)
+            // Transcription received — close WS and reset state
+            setState('idle')
+            setDuration(0)
+            if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
+              wsRef.current.close()
+            }
+          } else if (msg.type === 'error') {
+            setError(msg.message || '语音识别失败')
+            setTimeout(() => setError(null), 3000)
+            setState('idle')
+            setDuration(0)
           }
         } catch {
           // ignore parse errors
@@ -85,6 +99,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTrans
   }, [roomId, onTranscription])
 
   const startRecording = useCallback(async () => {
+    // Prevent double-trigger from pointerDown + click both firing
+    if (startingRef.current) return
+    startingRef.current = true
+    setError(null)
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
@@ -99,35 +118,57 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTrans
       mediaRecorderRef.current = recorder
       chunksRef.current = []
 
+      let chunksSentCount = 0
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data)
-          // Send chunk via WebSocket
+          pendingSendsRef.current++
           const reader = new FileReader()
           reader.onloadend = () => {
             if (ws.readyState === WebSocket.OPEN && reader.result) {
               const base64 = (reader.result as string).split(',')[1]
-              ws.send(JSON.stringify({ type: 'audio_chunk', data: base64 }))
+              if (base64) {
+                ws.send(JSON.stringify({ type: 'audio_chunk', data: base64 }))
+                chunksSentCount++
+              }
             }
+            pendingSendsRef.current--
           }
           reader.readAsDataURL(e.data)
         }
       }
 
       recorder.onstop = () => {
-        // Send speech_end signal
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'speech_end', format: 'webm' }))
-        }
-        setState('processing')
-        // Auto-close WS after a delay to receive transcription
-        setTimeout(() => {
-          if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
-            wsRef.current.close()
+        // Wait for all pending audio chunks to be sent before sending speech_end
+        const flushAndEnd = () => {
+          if (pendingSendsRef.current > 0) {
+            setTimeout(flushAndEnd, 50)
+            return
           }
-          setState('idle')
-          setDuration(0)
-        }, 10000) // 10s timeout for transcription
+          if (chunksSentCount === 0) {
+            // No audio data was actually sent — don't send speech_end
+            setError('未录到音频数据，请重试')
+            setTimeout(() => setError(null), 3000)
+            setState('idle')
+            setDuration(0)
+            if (ws.readyState === WebSocket.OPEN) ws.close()
+            return
+          }
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'speech_end', format: 'webm' }))
+          }
+          setState('processing')
+          // Auto-close WS after a delay to receive transcription
+          setTimeout(() => {
+            if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
+              wsRef.current.close()
+            }
+            setState('idle')
+            setDuration(0)
+          }, 10000) // 10s timeout for transcription
+        }
+        flushAndEnd()
       }
 
       recorder.start(500) // 500ms chunks
@@ -136,10 +177,23 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTrans
       timerRef.current = window.setInterval(() => {
         setDuration((d) => d + 1)
       }, 1000)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to start recording:', err)
       stopEverything()
       setState('idle')
+      // Show user-visible error
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        setError('请允许麦克风权限')
+      } else if (err?.name === 'NotFoundError') {
+        setError('未检测到麦克风')
+      } else if (err?.message?.includes('WebSocket')) {
+        setError('语音服务连接失败')
+      } else {
+        setError('录音启动失败')
+      }
+      setTimeout(() => setError(null), 3000)
+    } finally {
+      startingRef.current = false
     }
   }, [connectWebSocket, stopEverything])
 
@@ -192,6 +246,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ roomId, disabled, onTrans
 
   return (
     <div className="voice-recorder">
+      {error && (
+        <span className="voice-error">{error}</span>
+      )}
       {state === 'recording' && (
         <span className="voice-duration">{formatDuration(duration)}</span>
       )}
