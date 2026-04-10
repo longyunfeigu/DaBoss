@@ -9,7 +9,15 @@ from __future__ import annotations
 import asyncio
 from datetime import timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from starlette.responses import Response, StreamingResponse
 
 from api.dependencies import (
@@ -22,6 +30,7 @@ from api.dependencies import (
     get_persona_editor_service,
     get_persona_loader,
     get_scenario_service,
+    get_stt_port,
     get_stakeholder_chat_service,
 )
 from application.services.stakeholder.chatroom_service import ChatRoomApplicationService
@@ -445,6 +454,100 @@ async def stream_room(room_id: int):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Voice WebSocket endpoint (Story 2.4)
+# ---------------------------------------------------------------------------
+
+
+@router.websocket("/rooms/{room_id}/voice")
+async def voice_ws(websocket: WebSocket, room_id: int):
+    """WebSocket for voice message input.
+
+    Client sends audio chunks while speaking, then a speech_end signal.
+    Server transcribes the audio and auto-sends as a text message,
+    triggering the normal persona reply flow (including TTS via SSE).
+
+    Protocol:
+      Client → Server:
+        { "type": "audio_chunk", "data": "<base64 audio>" }
+        { "type": "speech_end" }
+      Server → Client:
+        { "type": "transcription", "text": "...", "is_final": false }
+        { "type": "transcription", "text": "...", "is_final": true }
+        { "type": "error", "message": "..." }
+    """
+    await websocket.accept()
+
+    import base64
+    import logging
+
+    from infrastructure.external.voice import get_stt_client
+
+    logger = logging.getLogger(__name__)
+    stt = get_stt_client()
+
+    if stt is None:
+        await websocket.send_json({"type": "error", "message": "STT service not configured"})
+        await websocket.close(code=1011)
+        return
+
+    audio_buffer = bytearray()
+
+    try:
+        while True:
+            raw = await websocket.receive_json()
+            msg_type = raw.get("type")
+
+            if msg_type == "audio_chunk":
+                # Accumulate audio data
+                audio_b64 = raw.get("data", "")
+                if audio_b64:
+                    audio_buffer.extend(base64.b64decode(audio_b64))
+
+            elif msg_type == "speech_end":
+                if not audio_buffer:
+                    await websocket.send_json(
+                        {"type": "error", "message": "No audio data received"}
+                    )
+                    continue
+
+                # Transcribe accumulated audio
+                try:
+                    audio_format = raw.get("format", "webm")
+                    result = await stt.transcribe(
+                        bytes(audio_buffer),
+                        language="zh",
+                        audio_format=audio_format,
+                    )
+                    text = result.text.strip()
+
+                    await websocket.send_json(
+                        {"type": "transcription", "text": text, "is_final": True}
+                    )
+
+                    # Auto-send as text message if transcription is not empty
+                    if text:
+                        from api.dependencies import get_stakeholder_chat_service
+
+                        svc = await get_stakeholder_chat_service()
+                        msg, room = await svc.send_message(room_id, text)
+                        # Generate replies in background (TTS audio will come via SSE)
+                        asyncio.create_task(svc.generate_replies(room_id, room))
+
+                except Exception as exc:
+                    logger.exception("STT transcription failed for room %d", room_id)
+                    await websocket.send_json(
+                        {"type": "error", "message": f"Transcription failed: {exc}"}
+                    )
+                finally:
+                    audio_buffer.clear()
+
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        logger.exception("Voice WebSocket error for room %d", room_id)
 
 
 # ---------------------------------------------------------------------------

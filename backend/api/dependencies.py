@@ -17,9 +17,12 @@ from application.services.stakeholder.coaching_service import CoachingService
 from application.services.stakeholder.stakeholder_chat_service import StakeholderChatService
 from application.ports.storage import StoragePort
 from application.ports.llm import LLMPort
+from application.ports.tts import TTSPort
+from application.ports.stt import STTPort
 from infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from infrastructure.external.storage import get_storage
 from infrastructure.external.llm import get_llm_client, get_anthropic_client
+from infrastructure.external.voice import get_tts_client, get_stt_client
 from infrastructure.adapters.storage_port import StorageProviderPortAdapter
 from infrastructure.adapters.idempotency_store import RedisIdempotencyStore
 from core.config import settings
@@ -88,6 +91,26 @@ async def get_stakeholder_llm_port() -> LLMPort:
     return client
 
 
+async def get_tts_port() -> TTSPort:
+    client = get_tts_client()
+    if client is None:
+        raise RuntimeError(
+            "TTS client not initialized. "
+            "Set VOICE__TTS_API_KEY in environment or .env and restart."
+        )
+    return client
+
+
+async def get_stt_port() -> STTPort:
+    client = get_stt_client()
+    if client is None:
+        raise RuntimeError(
+            "STT client not initialized. "
+            "Set VOICE__STT_API_KEY in environment or .env and restart."
+        )
+    return client
+
+
 def get_persona_loader() -> PersonaLoader:
     return PersonaLoader(persona_dir=settings.stakeholder.persona_dir)
 
@@ -117,6 +140,8 @@ async def get_stakeholder_chat_service(
         llm=llm,
         persona_loader=loader,
     )
+    # TTS is optional — None if not configured
+    tts = get_tts_client()
     return StakeholderChatService(
         uow_factory=SQLAlchemyUnitOfWork,
         persona_loader=loader,
@@ -124,6 +149,7 @@ async def get_stakeholder_chat_service(
         dispatcher=dispatcher,
         max_group_rounds=settings.stakeholder.max_group_rounds,
         compression_service=compression,
+        tts=tts,
     )
 
 

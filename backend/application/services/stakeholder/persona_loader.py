@@ -32,6 +32,10 @@ class Persona:
     profile_summary: str = ""
     full_content: str = ""
     parse_status: str = "ok"  # ok | partial
+    # Voice configuration (optional, for TTS)
+    voice_id: Optional[str] = None
+    voice_speed: float = 1.0
+    voice_style: Optional[str] = None
 
 
 class PersonaLoader:
@@ -128,6 +132,11 @@ class PersonaLoader:
         organization_id = self._parse_optional_int(frontmatter.get("organization_id"))
         team_id = self._parse_optional_int(frontmatter.get("team_id"))
 
+        # Parse optional voice config from frontmatter
+        voice_id = frontmatter.get("voice_id")
+        voice_speed = self._parse_optional_float(frontmatter.get("voice_speed")) or 1.0
+        voice_style = frontmatter.get("voice_style")
+
         if not name or not role:
             parse_status = "partial"
             if not name:
@@ -145,6 +154,9 @@ class PersonaLoader:
             profile_summary=profile_summary,
             full_content=content,
             parse_status=parse_status,
+            voice_id=voice_id,
+            voice_speed=voice_speed,
+            voice_style=voice_style,
         )
 
     def _extract_frontmatter(self, content: str) -> dict:
@@ -184,6 +196,16 @@ class PersonaLoader:
             return None
         try:
             return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _parse_optional_float(value: str | None) -> float | None:
+        """Parse a string value to float, returning None if invalid."""
+        if value is None:
+            return None
+        try:
+            return float(value)
         except (ValueError, TypeError):
             return None
 

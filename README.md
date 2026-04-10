@@ -110,6 +110,35 @@ AI角色会根据角色设定做出真实反应——质疑、施压、带着隐
   <img src="docs/assets/growth-dashboard.png" alt="成长仪表板" width="80%"/>
 </div>
 
+### 语音对话
+
+像打电话一样练习沟通——点击录音说话，AI 角色用独立音色语音回复。每个角色声音不同，群聊听起来像真实会议。
+
+| 能力 | 说明 |
+|:---|:---|
+| **语音输入** | 点击录音 / 长按说话，VAD 自动检测语音起止 |
+| **语音输出** | 每个 Persona 独立音色，逐句流式播放 |
+| **多厂商支持** | TTS: MiniMax / ElevenLabs；STT: OpenAI Whisper 兼容 |
+| **低延迟管道** | LLM 流式输出 → 按句切分 → TTS 并行合成 → 首句 ~1.5s 响应 |
+| **无侵入** | 语音是文本的增强层，所有消息仍以文字存储，分析报告等功能不受影响 |
+
+通过环境变量一键切换 TTS 厂商：
+
+```bash
+# MiniMax TTS（默认）
+VOICE__TTS_PROVIDER=minimax
+VOICE__TTS_API_KEY=your-minimax-key
+
+# ElevenLabs TTS
+VOICE__TTS_PROVIDER=elevenlabs
+VOICE__TTS_API_KEY=your-elevenlabs-key
+
+# STT（OpenAI Whisper 兼容）
+VOICE__STT_PROVIDER=whisper
+VOICE__STT_API_KEY=your-openai-key
+VOICE__STT_BASE_URL=https://api.openai.com/v1
+```
+
 ### 组织关系图谱
 
 角色不是孤立的个体——他们之间有权力关系、联盟和历史恩怨。
@@ -180,7 +209,7 @@ cd frontend && npm install && npm run dev
 - [ ] 更多评估维度（跨文化沟通、谈判技巧等）
 - [ ] 角色市场（预设的经典角色包）
 - [ ] 团队协作模式（多人实时演练）
-- [ ] 语音对话支持
+- [x] 语音对话支持（MiniMax / ElevenLabs TTS + OpenAI Whisper STT）
 - [ ] 移动端适配
 
 ---

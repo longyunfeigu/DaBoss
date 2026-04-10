@@ -32,6 +32,12 @@ from infrastructure.external.llm import (
     init_anthropic_client,
     shutdown_anthropic_client,
 )
+from infrastructure.external.voice import (
+    init_tts_client,
+    shutdown_tts_client,
+    init_stt_client,
+    shutdown_stt_client,
+)
 from infrastructure.external.storage import (
     get_storage_config,
     init_storage_client,
@@ -111,8 +117,21 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error("anthropic_init_failed", error=str(exc))
 
+    # 初始化语音客户端（TTS / STT）
+    try:
+        await init_tts_client()
+    except Exception as exc:
+        logger.error("tts_init_failed", error=str(exc))
+    try:
+        await init_stt_client()
+    except Exception as exc:
+        logger.error("stt_init_failed", error=str(exc))
+
     yield
     # 关闭时的清理工作
+    await shutdown_stt_client()
+    await shutdown_tts_client()
+    logger.info("voice_shutdown", message="Voice clients (TTS/STT) shutdown")
     await shutdown_anthropic_client()
     logger.info("anthropic_shutdown", message="Anthropic client shutdown")
     await shutdown_llm_client()

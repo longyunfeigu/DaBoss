@@ -91,6 +91,7 @@ class StakeholderChatService:
         dispatcher=None,
         max_group_rounds: int = 20,
         compression_service=None,
+        tts=None,
     ) -> None:
         self._uow_factory = uow_factory
         self._persona_loader = persona_loader
@@ -98,6 +99,7 @@ class StakeholderChatService:
         self._dispatcher = dispatcher
         self._max_group_rounds = max_group_rounds
         self._compression = compression_service
+        self._tts = tts  # Optional TTSPort for voice synthesis
 
     async def send_message(self, room_id: int, content: str) -> tuple[MessageDTO, ChatRoom]:
         """Save user message (committed immediately). Returns (dto, room) for background reply generation."""
@@ -306,6 +308,17 @@ class StakeholderChatService:
                         LLMMessage(role=m["role"], content=m["content"]) for m in llm_messages
                     )
                     chunks: list[str] = []
+
+                    # Set up TTS pipeline if voice is enabled for this persona
+                    tts_enabled = self._tts is not None and persona.voice_id is not None
+                    sentence_buf = None
+                    tts_tasks: list[asyncio.Task] = []
+                    audio_index = 0
+                    if tts_enabled:
+                        from application.services.stakeholder.sentence_buffer import SentenceBuffer
+
+                        sentence_buf = SentenceBuffer()
+
                     async for chunk in self._llm.stream(all_messages):
                         if chunk.content:
                             chunks.append(chunk.content)
@@ -314,6 +327,34 @@ class StakeholderChatService:
                                 "streaming_delta",
                                 {"persona_id": persona_id, "delta": chunk.content},
                             )
+
+                            # Feed to SentenceBuffer for TTS
+                            if sentence_buf is not None:
+                                sentence = sentence_buf.feed(chunk.content)
+                                if sentence:
+                                    task = asyncio.create_task(
+                                        self._synthesize_and_push(
+                                            room_id, persona_id, persona, sentence, audio_index
+                                        )
+                                    )
+                                    tts_tasks.append(task)
+                                    audio_index += 1
+
+                    # Flush remaining sentence for TTS
+                    if sentence_buf is not None:
+                        remaining = sentence_buf.flush()
+                        if remaining:
+                            task = asyncio.create_task(
+                                self._synthesize_and_push(
+                                    room_id, persona_id, persona, remaining, audio_index
+                                )
+                            )
+                            tts_tasks.append(task)
+
+                    # Wait for all TTS tasks to finish before continuing
+                    if tts_tasks:
+                        await asyncio.gather(*tts_tasks, return_exceptions=True)
+
                     reply_content = "".join(chunks) if chunks else None
                 except Exception as exc:
                     logger.error(
@@ -385,6 +426,54 @@ class StakeholderChatService:
                 persona_id,
             )
             return False, None
+
+    async def _synthesize_and_push(
+        self,
+        room_id: int,
+        persona_id: str,
+        persona,
+        text: str,
+        index: int,
+    ) -> None:
+        """Synthesize a sentence via TTS and push audio chunks via SSE.
+
+        Runs as a concurrent task alongside LLM generation so that
+        TTS for sentence N happens while LLM generates sentence N+1.
+        """
+        import base64
+
+        from application.ports.tts import TTSConfig
+
+        try:
+            config = TTSConfig(
+                voice_id=persona.voice_id,
+                speed=persona.voice_speed,
+            )
+            # Accumulate all streaming chunks into a complete mp3 per sentence.
+            # Individual chunks are mp3 fragments that browsers can't decode alone.
+            audio_parts: list[bytes] = []
+            async for audio_bytes in self._tts.synthesize_stream(text, config):
+                audio_parts.append(audio_bytes)
+
+            if audio_parts:
+                complete_audio = b"".join(audio_parts)
+                await room_event_bus.publish(
+                    room_id,
+                    "audio_chunk",
+                    {
+                        "persona_id": persona_id,
+                        "data": base64.b64encode(complete_audio).decode("ascii"),
+                        "sentence_index": index,
+                        "sentence_final": True,
+                    },
+                )
+        except Exception:
+            logger.exception(
+                "TTS synthesis failed for room %d, persona %s, sentence %d",
+                room_id,
+                persona_id,
+                index,
+            )
 
     async def _safe_compress(self, room_id: int) -> None:
         """Run compression in background, swallowing errors."""

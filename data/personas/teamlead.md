@@ -3,7 +3,9 @@ name: Robin
 role: 执行层 Leader / Li Yi 李逸 / 与我协作关系密切，是我和剑锋之间的关键中间层
 last_updated: 2026-04-01
 confidence: 中  # 低=1-2次观察, 中=3-5次一致观察, 高=6+次观察且无矛盾
-
+voice_id: "female-shaonv"
+voice_speed: 1.0
+voice_style: "Speak calmly and diplomatically. Balanced, moderate pace."
 ---
 
 ## 信息偏好

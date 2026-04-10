@@ -3,7 +3,9 @@ name: 剑锋
 role: 直属上级 / Lu Jianfeng
 last_updated: 2026-04-07
 confidence: 高  # 低=1-2次观察, 中=3-5次一致观察, 高=6+次观察且无矛盾
-
+voice_id: "male-qn-qingse"
+voice_speed: 1.0
+voice_style: "Speak with authority and impatience. Direct and demanding."
 ---
 
 ## 信息偏好

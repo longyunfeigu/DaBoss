@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
-import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb } from 'lucide-react'
+import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX } from 'lucide-react'
 import './App.css'
 import Avatar from './components/Avatar'
 import RoomList from './components/RoomList'
@@ -11,6 +11,8 @@ import OrganizationDialog from './components/OrganizationDialog'
 import EmotionCurve from './components/EmotionCurve'
 import EmotionSidebar from './components/EmotionSidebar'
 import GrowthDashboard from './components/GrowthDashboard'
+import VoiceRecorder from './components/VoiceRecorder'
+import { AudioPlayQueue } from './services/audioPlayer'
 import {
   fetchPersonas,
   fetchOrganizations,
@@ -128,8 +130,27 @@ function App() {
   const [analyzingRoom, setAnalyzingRoom] = useState(false)
   const [analysisReportList, setAnalysisReportList] = useState<AnalysisReportSummary[]>([])
   const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null)
+  // Voice state
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [voiceMuted, setVoiceMuted] = useState(false)
+  const [playingPersonaId, setPlayingPersonaId] = useState<string | null>(null)
+  const audioPlayerRef = useRef<AudioPlayQueue | null>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+
+  // Initialize audio player
+  useEffect(() => {
+    const player = new AudioPlayQueue({
+      onPlayingChange: (_playing, personaId) => {
+        setPlayingPersonaId(personaId)
+      },
+    })
+    audioPlayerRef.current = player
+    return () => {
+      player.destroy()
+      audioPlayerRef.current = null
+    }
+  }, [])
 
   // Load persona map
   const loadPersonas = () => {
@@ -221,6 +242,15 @@ function App() {
       }
     })
 
+    es.addEventListener('audio_chunk', (e) => {
+      if (audioPlayerRef.current && !audioPlayerRef.current.isMuted()) {
+        const data = JSON.parse(e.data)
+        if (data.data) {
+          audioPlayerRef.current.enqueue(data.persona_id, data.data)
+        }
+      }
+    })
+
     es.addEventListener('round_end', (e) => {
       setTypingPersona(null)
       setStreamingContent({})
@@ -275,6 +305,9 @@ function App() {
   const handleSend = async () => {
     const content = inputValue.trim()
     if (!content || !selectedRoomId || sending) return
+
+    // Stop any playing audio when user sends a new message
+    audioPlayerRef.current?.stop()
 
     setSending(true)
     setInputValue('')
@@ -927,6 +960,12 @@ function App() {
                   {personaMap[typingPersona]?.name || typingPersona} 正在回复
                 </div>
               )}
+              {playingPersonaId && !typingPersona && (
+                <div className="typing-indicator">
+                  <Volume2 size={14} />
+                  &nbsp;{personaMap[playingPersonaId]?.name || playingPersonaId} 正在播放语音
+                </div>
+              )}
             </div>
             <div className="message-input-bar">
               {mentionQuery !== null && mentionResults.length > 0 && (
@@ -956,6 +995,36 @@ function App() {
                 }
                 disabled={sending}
               />
+              {voiceEnabled && selectedRoomId && (
+                <VoiceRecorder
+                  roomId={selectedRoomId}
+                  disabled={sending}
+                  onTranscription={(text) => {
+                    // Show transcribed text in input (user can see what was said)
+                    setInputValue(text)
+                  }}
+                />
+              )}
+              <button
+                className={`voice-toggle-btn ${voiceMuted ? 'muted' : ''}`}
+                onClick={() => {
+                  if (!voiceEnabled) {
+                    setVoiceEnabled(true)
+                    setVoiceMuted(false)
+                    audioPlayerRef.current?.setMuted(false)
+                  } else if (!voiceMuted) {
+                    setVoiceMuted(true)
+                    audioPlayerRef.current?.setMuted(true)
+                  } else {
+                    setVoiceEnabled(false)
+                    setVoiceMuted(false)
+                    audioPlayerRef.current?.setMuted(true)
+                  }
+                }}
+                title={!voiceEnabled ? '开启语音' : voiceMuted ? '关闭语音模式' : '静音'}
+              >
+                {voiceEnabled && !voiceMuted ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              </button>
               <button
                 className="live-coach-btn"
                 onClick={handleStartLiveCoaching}

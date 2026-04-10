@@ -797,6 +797,32 @@
   cursor: not-allowed;
 }
 
+.voice-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-secondary);
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.voice-toggle-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.voice-toggle-btn.muted {
+  color: var(--text-muted, #999);
+  border-color: var(--border);
+}
+
 /* Persona panel in sidebar */
 .persona-panel {
   padding: 12px 0;

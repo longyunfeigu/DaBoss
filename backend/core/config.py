@@ -151,6 +151,17 @@ class HealthSettings(BaseModel):
     access_token: Optional[str] = None
 
 
+class VoiceSettings(BaseModel):
+    tts_provider: str = "minimax"
+    tts_api_key: Optional[str] = None
+    tts_base_url: Optional[str] = None
+    tts_model: str = "speech-2.8-hd"
+    stt_provider: str = "whisper"
+    stt_api_key: Optional[str] = None
+    stt_base_url: Optional[str] = None
+    stt_model: str = "whisper-1"
+
+
 class StakeholderSettings(BaseModel):
     anthropic_api_key: Optional[str] = None
     anthropic_base_url: Optional[str] = None
@@ -215,6 +226,9 @@ class Settings(BaseSettings):
     metrics: MetricsSettings = Field(default_factory=MetricsSettings)
     tracing: TracingSettings = Field(default_factory=TracingSettings)
     health: HealthSettings = Field(default_factory=HealthSettings)
+
+    # Voice (TTS / STT) settings
+    voice: VoiceSettings = Field(default_factory=VoiceSettings)
 
     # Stakeholder Chat settings
     stakeholder: StakeholderSettings = Field(default_factory=StakeholderSettings)
