@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
+import BattlePrepPage from './pages/BattlePrepPage'
 import { AppProvider, useAppContext } from './contexts/AppContext'
 import { MessageCircle, Layers, Plus, Building2, TrendingUp, Zap } from 'lucide-react'
 import './App.css'
@@ -13,7 +14,6 @@ import PersonaEditorDialog from './components/PersonaEditorDialog'
 import ScenarioDialog from './components/ScenarioDialog'
 import OrganizationDialog from './components/OrganizationDialog'
 import GrowthDashboard from './components/GrowthDashboard'
-import BattlePrepDialog from './components/BattlePrepDialog'
 import type { PersonaSummary } from './services/api'
 
 /**
@@ -23,6 +23,7 @@ import type { PersonaSummary } from './services/api'
  */
 function AppInner() {
   const { personaMap, currentOrg, reloadPersonas, reloadOrganizations } = useAppContext()
+  const navigate = useNavigate()
 
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -34,7 +35,6 @@ function AppInner() {
     persona: PersonaSummary | null
   }>({ open: false, persona: null })
   const [refreshKey, setRefreshKey] = useState(0)
-  const [showBattlePrep, setShowBattlePrep] = useState(false)
 
   const loadPersonas = reloadPersonas
   const loadOrg = reloadOrganizations
@@ -42,13 +42,6 @@ function AppInner() {
   const handleRoomCreated = async (roomId: number) => {
     setRefreshKey((k) => k + 1)
     setSelectedRoomId(roomId)
-  }
-
-  const handleBattlePrepStarted = async (roomId: number) => {
-    setShowBattlePrep(false)
-    setRefreshKey((k) => k + 1)
-    setSelectedRoomId(roomId)
-    setShowGrowth(false)
   }
 
   return (
@@ -132,7 +125,7 @@ function AppInner() {
 
         <button
           className="battle-prep-btn"
-          onClick={() => setShowBattlePrep(true)}
+          onClick={() => navigate('/battle-prep')}
         >
           <Zap size={16} />
           <span>紧急备战</span>
@@ -196,12 +189,6 @@ function AppInner() {
         onOrgChanged={() => { loadOrg(); loadPersonas() }}
         personas={Object.values(personaMap)}
       />
-
-      <BattlePrepDialog
-        open={showBattlePrep}
-        onClose={() => setShowBattlePrep(false)}
-        onStarted={handleBattlePrepStarted}
-      />
     </div>
   )
 }
@@ -214,6 +201,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:roomId" element={<ChatPage />} />
+          <Route path="battle-prep" element={<BattlePrepPage />} />
           <Route path="*" element={<AppInner />} />
         </Route>
       </Routes>
