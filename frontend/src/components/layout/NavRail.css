@@ -1,0 +1,57 @@
+.navrail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 52px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  padding: 12px 0;
+  gap: 12px;
+}
+
+.navrail-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background var(--transition-fast);
+}
+
+.navrail-logo:hover {
+  background: var(--green-soft);
+}
+
+.navrail-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.navrail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.navrail-icon:hover {
+  opacity: 1;
+  background: var(--bg-base);
+}
+
+.navrail-icon.active {
+  background: var(--green-soft);
+  color: var(--green);
+  opacity: 1;
+}

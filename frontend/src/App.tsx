@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import Layout from './components/layout/Layout'
 import { AppProvider, useAppContext } from './contexts/AppContext'
 import Markdown from 'react-markdown'
 import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX, Zap, Flag, Loader2 } from 'lucide-react'
@@ -707,7 +708,6 @@ function AppInner() {
   const streamingEntries = Object.entries(streamingContent)
 
   return (
-    <Routes><Route path="*" element={
     <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
@@ -1352,14 +1352,17 @@ function AppInner() {
         personaName={cheatSheetPersona}
       />
     </div>
-    } /></Routes>
   )
 }
 
 function App() {
   return (
     <AppProvider>
-      <AppInner />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="*" element={<AppInner />} />
+        </Route>
+      </Routes>
     </AppProvider>
   )
 }
