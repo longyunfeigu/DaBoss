@@ -35,6 +35,11 @@
   background: #fff;
 }
 
+/* When downloading, remove overflow so html2canvas captures full content */
+.cs-card.cs-card--capturing {
+  overflow: visible;
+}
+
 /* Header */
 .cs-header {
   display: flex;

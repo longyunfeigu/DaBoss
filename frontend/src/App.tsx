@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
-import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX, Zap, Flag } from 'lucide-react'
+import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX, Zap, Flag, Loader2 } from 'lucide-react'
 import './App.css'
 import Avatar from './components/Avatar'
 import RoomList from './components/RoomList'
@@ -139,6 +139,7 @@ function App() {
   const [cheatSheetData, setCheatSheetData] = useState<CheatSheetData | null>(null)
   const [cheatSheetPersona, setCheatSheetPersona] = useState('')
   const [battlePrepRoundCount, setBattlePrepRoundCount] = useState(0)
+  const [battlePrepEnding, setBattlePrepEnding] = useState(false)
   // Voice state
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [voiceMuted, setVoiceMuted] = useState(false)
@@ -343,15 +344,18 @@ function App() {
   }
 
   const handleEndBattle = async () => {
-    if (!selectedRoomId || !selectedRoom) return
+    if (!selectedRoomId || !selectedRoom || battlePrepEnding) return
     const personaId = selectedRoom.room.persona_ids[0] || ''
     const persona = personaMap[personaId]
     setCheatSheetPersona(persona?.name || '对方')
+    setBattlePrepEnding(true)
     try {
       const sheet = await generateCheatSheet(selectedRoomId)
       setCheatSheetData(sheet)
     } catch (e: any) {
       alert(e?.message || '话术纸条生成失败')
+    } finally {
+      setBattlePrepEnding(false)
     }
   }
 
@@ -913,9 +917,9 @@ function App() {
               <div className="battle-prep-bar">
                 <Zap size={14} />
                 <span>备战模式 · 已练 {battlePrepRoundCount}/12 轮</span>
-                <button className="end-battle-btn" onClick={handleEndBattle}>
-                  <Flag size={14} />
-                  结束备战
+                <button className="end-battle-btn" onClick={handleEndBattle} disabled={battlePrepEnding}>
+                  {battlePrepEnding ? <Loader2 size={14} className="spin" /> : <Flag size={14} />}
+                  {battlePrepEnding ? '生成话术纸条...' : '结束备战'}
                 </button>
               </div>
             )}

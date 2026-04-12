@@ -47,12 +47,24 @@ export default function CheatSheetDialog({ open, onClose, data, personaName }: P
     if (!el) return
     setDownloading(true)
     try {
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#fff' })
+      // Temporarily remove overflow clipping so html2canvas captures full content
+      el.classList.add('cs-card--capturing')
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: '#fff',
+        scrollY: 0,
+        scrollX: 0,
+        height: el.scrollHeight,
+        windowHeight: el.scrollHeight,
+      })
+      el.classList.remove('cs-card--capturing')
       const link = document.createElement('a')
       link.download = '话术纸条.png'
       link.href = canvas.toDataURL('image/png')
       link.click()
     } finally {
+      const el2 = cardRef.current
+      if (el2) el2.classList.remove('cs-card--capturing')
       setDownloading(false)
     }
   }
