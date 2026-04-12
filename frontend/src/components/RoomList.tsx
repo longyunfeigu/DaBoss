@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { MessageSquare, Users, Plus, Trash2 } from 'lucide-react'
 import { fetchRooms, deleteRoom, type ChatRoom } from '../services/api'
 import './RoomList.css'
@@ -15,6 +16,7 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
   const [rooms, setRooms] = useState<ChatRoom[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const location = useLocation()
 
   useEffect(() => {
     setLoading(true)
@@ -26,6 +28,7 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
 
   const handleDelete = async (e: React.MouseEvent, room: ChatRoom) => {
     e.stopPropagation()
+    e.preventDefault() // prevent Link navigation
     if (!confirm(`确定删除「${room.name}」？消息将一并删除。`)) return
     try {
       await deleteRoom(room.id)
@@ -34,6 +37,14 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
     } catch (err) {
       console.error('Delete failed:', err)
     }
+  }
+
+  /** Check if a room is active by URL or by selectedRoomId prop */
+  const isActive = (roomId: number) => {
+    // Check URL path
+    if (location.pathname === `/chat/${roomId}`) return true
+    // Fallback to prop-based selection (for current routing setup)
+    return selectedRoomId === roomId
   }
 
   if (loading) return <div className="room-list"><span className="room-list-loading">加载中...</span></div>
@@ -53,10 +64,12 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
         <div className="room-empty">暂无聊天室</div>
       ) : (
         regularRooms.map((room) => (
-          <div
+          <Link
             key={room.id}
-            className={`room-item ${selectedRoomId === room.id ? 'active' : ''}`}
+            to={`/chat/${room.id}`}
+            className={`room-item ${isActive(room.id) ? 'active' : ''}`}
             onClick={() => onSelectRoom(room)}
+            style={{ textDecoration: 'none', color: 'inherit' }}
           >
             <div className="room-item-icon">
               {room.type === 'private' ? <MessageSquare size={16} /> : <Users size={16} />}
@@ -74,7 +87,7 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
             >
               <Trash2 size={13} />
             </button>
-          </div>
+          </Link>
         ))
       )}
     </div>

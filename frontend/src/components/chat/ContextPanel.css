@@ -1,0 +1,209 @@
+/* ContextPanel — right-side smart context panel */
+
+.context-panel {
+  width: 210px;
+  min-width: 210px;
+  border-left: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: width 0.2s ease, min-width 0.2s ease;
+  overflow: hidden;
+}
+
+.context-panel.collapsed {
+  width: 32px;
+  min-width: 32px;
+}
+
+/* Toggle button */
+.ctx-toggle {
+  position: absolute;
+  top: 12px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface, #fff);
+  color: var(--text-muted, #9ca3af);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all 0.15s;
+}
+
+.ctx-toggle:hover {
+  color: var(--text-primary, #1f2937);
+  background: var(--surface-hover, #f3f4f6);
+}
+
+/* Body content */
+.ctx-body {
+  padding: 44px 12px 12px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Profile card */
+.ctx-profile-card {
+  padding: 10px;
+  background: var(--surface-secondary, #f9fafb);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-light, #f3f4f6);
+}
+
+.ctx-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ctx-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.ctx-profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ctx-tag {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 99px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Section */
+.ctx-section {
+  padding: 0;
+}
+
+.ctx-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.ctx-link-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--green, #2D9C6F);
+  cursor: pointer;
+  padding: 2px 0;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.ctx-link-btn:hover {
+  opacity: 0.7;
+}
+
+/* Emotion mini chart */
+.ctx-emotion-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 52px;
+  padding: 4px 0;
+}
+
+.ctx-emotion-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 3px;
+}
+
+.ctx-emotion-bar {
+  width: 100%;
+  max-width: 24px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+}
+
+.ctx-emotion-bar-label {
+  font-size: 9px;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+}
+
+/* Live score */
+.ctx-score-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ctx-grade {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--green, #2D9C6F);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ctx-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  flex: 1;
+}
+
+.ctx-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ctx-metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  line-height: 1.2;
+}
+
+.ctx-metric-label {
+  font-size: 9px;
+  color: var(--text-muted, #9ca3af);
+}
+
+/* Session XP card */
+.ctx-xp-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(45, 156, 111, 0.08);
+  border-radius: var(--radius-md, 8px);
+  margin-top: auto;
+}
+
+.ctx-xp-label {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.ctx-xp-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green, #2D9C6F);
+}

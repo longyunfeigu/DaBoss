@@ -3,8 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import HomePage from './pages/HomePage'
 import { AppProvider, useAppContext } from './contexts/AppContext'
-import Markdown from 'react-markdown'
-import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX, Zap, Flag, Loader2 } from 'lucide-react'
+import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Activity, Zap, Flag, Loader2, Building2, TrendingUp } from 'lucide-react'
 import './App.css'
 import Avatar from './components/Avatar'
 import RoomList from './components/RoomList'
@@ -17,7 +16,11 @@ import EmotionSidebar from './components/EmotionSidebar'
 import GrowthDashboard from './components/GrowthDashboard'
 import BattlePrepDialog from './components/BattlePrepDialog'
 import CheatSheetComponent from './components/CheatSheet'
-import VoiceRecorder from './components/VoiceRecorder'
+import MessageList from './components/chat/MessageList'
+import ChatInput from './components/chat/ChatInput'
+import CoachingPanel from './components/chat/CoachingPanel'
+import AnalysisPanel from './components/chat/AnalysisPanel'
+import ContextPanel from './components/chat/ContextPanel'
 import { useChat } from './hooks/useChat'
 import { useVoice } from './hooks/useVoice'
 import { useCoaching } from './hooks/useCoaching'
@@ -31,53 +34,6 @@ import {
   type CheatSheet as CheatSheetData,
 } from './services/api'
 
-function formatTime(ts: string | null): string {
-  if (!ts) return ''
-  const d = new Date(ts)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-/** Highlight @mentions inside a plain text string */
-function highlightMentions(text: string): React.ReactNode {
-  const parts = text.split(/(@[\w\u4e00-\u9fff]+)/g)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    part.startsWith('@') ? (
-      <span key={i} className="mention-highlight">{part}</span>
-    ) : (
-      part
-    ),
-  )
-}
-
-/** Recursively walk React children, applying @mention highlights to string nodes */
-function withMentions(children: React.ReactNode): React.ReactNode {
-  if (typeof children === 'string') return highlightMentions(children)
-  if (Array.isArray(children)) {
-    return children.map((child, i) =>
-      typeof child === 'string'
-        ? <React.Fragment key={i}>{highlightMentions(child)}</React.Fragment>
-        : child,
-    )
-  }
-  return children
-}
-
-/** Render message content as Markdown with @mention highlights */
-function renderContent(text: string) {
-  return (
-    <Markdown
-      components={{
-        p: ({ children }) => <p>{withMentions(children)}</p>,
-        li: ({ children }) => <li>{withMentions(children)}</li>,
-      }}
-    >
-      {text}
-    </Markdown>
-  )
-}
-
 function AppInner() {
   const { personaMap, currentOrg, reloadPersonas, reloadOrganizations } = useAppContext()
 
@@ -89,6 +45,7 @@ function AppInner() {
   const [showEmotionSidebar, setShowEmotionSidebar] = useState(false)
   const [showEmotionCurve, setShowEmotionCurve] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showContextPanel, setShowContextPanel] = useState(false)
   const [personaEditorState, setPersonaEditorState] = useState<{
     open: boolean
     persona: PersonaSummary | null
@@ -190,6 +147,13 @@ function AppInner() {
       chat.selectedRoom?.room.persona_ids,
     )
   }
+
+  /** Personas for the currently selected room */
+  const roomPersonas = chat.selectedRoom
+    ? chat.selectedRoom.room.persona_ids
+        .map((id) => personaMap[id])
+        .filter(Boolean)
+    : []
 
   return (
     <div className="app-layout">
@@ -384,196 +348,52 @@ function AppInner() {
                 </button>
               </div>
             )}
-            <div className="message-list" ref={chat.messageListRef} onClick={() => showExportMenu && setShowExportMenu(false)}>
-              {chat.selectedRoom.messages.length === 0 && chat.streamingEntries.length === 0 ? (
-                <div className="empty-messages">
-                  <MessageCircle size={36} strokeWidth={1.2} />
-                  <p>发送第一条消息，开始模拟对话</p>
-                </div>
-              ) : (
-                <>
-                  {chat.selectedRoom.messages.map((msg) => {
-                    const persona = msg.sender_type === 'persona' ? personaMap[msg.sender_id] : null
-                    const borderColor = persona?.avatar_color || undefined
-                    return (
-                      <div key={msg.id} id={`msg-${msg.id}`} className={`message ${msg.sender_type}${analysis.highlightedMessageId === msg.id ? ' highlighted' : ''}`} data-sender={msg.sender_type}>
-                        {msg.sender_type === 'persona' && (
-                          <div className="message-row">
-                            <Avatar name={persona?.name || msg.sender_id} color={borderColor || '#2D9C6F'} size={28} />
-                            <div className="message-content">
-                              <div className="sender-name" style={borderColor ? { color: borderColor } : undefined}>
-                                {persona?.name || msg.sender_id}
-                                {msg.emotion_label && (
-                                  <span className={`emotion-tag ${(msg.emotion_score ?? 0) > 0 ? 'positive' : (msg.emotion_score ?? 0) < 0 ? 'negative' : 'neutral'}`}>
-                                    {msg.emotion_label}
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                className="message-bubble"
-                                style={borderColor ? { borderLeft: `2px solid ${borderColor}` } : undefined}
-                              >
-                                {renderContent(msg.content)}
-                              </div>
-                              <div className="message-time">{formatTime(msg.timestamp)}</div>
-                            </div>
-                          </div>
-                        )}
-                        {msg.sender_type === 'user' && (
-                          <>
-                            <div className="message-bubble">
-                              {renderContent(msg.content)}
-                            </div>
-                            <div className="message-time">{formatTime(msg.timestamp)}</div>
-                          </>
-                        )}
-                        {msg.sender_type === 'system' && (
-                          <div className="message-bubble">
-                            {renderContent(msg.content)}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {/* Streaming messages -- in-progress persona replies */}
-                  {chat.streamingEntries.map(([personaId, text]) => {
-                    const persona = personaMap[personaId]
-                    const borderColor = persona?.avatar_color || undefined
-                    return (
-                      <div key={`streaming-${personaId}`} className="message persona streaming" data-sender="persona">
-                        <div className="message-row">
-                          <Avatar name={persona?.name || personaId} color={borderColor || '#2D9C6F'} size={28} />
-                          <div className="message-content">
-                            <div className="sender-name" style={borderColor ? { color: borderColor } : undefined}>
-                              {persona?.name || personaId}
-                            </div>
-                            <div
-                              className="message-bubble"
-                              style={borderColor ? { borderLeft: `2px solid ${borderColor}` } : undefined}
-                            >
-                              {renderContent(text)}
-                              <span className="streaming-cursor" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </>
-              )}
-              {/* Dispatcher transparency: collapsible dispatch summary */}
-              {chat.dispatchSummary && chat.dispatchSummary.length > 0 && (
-                <div className="dispatch-summary" onClick={() => chat.setDispatchExpanded((v) => !v)}>
-                  <div className="dispatch-summary-header">
-                    <ClipboardList size={15} className="dispatch-summary-icon" />
-                    <span>
-                      本轮{' '}
-                      {chat.dispatchSummary.reduce((n, p) => n + p.responders.length, 0)}{' '}
-                      位角色参与讨论
-                    </span>
-                    <span className={`dispatch-expand-arrow ${chat.dispatchExpanded ? 'expanded' : ''}`}>&#9662;</span>
-                  </div>
-                  {chat.dispatchExpanded && (
-                    <div className="dispatch-summary-body">
-                      {chat.dispatchSummary.map((phase, i) => (
-                        <div key={i} className="dispatch-phase">
-                          <div className="dispatch-phase-label">
-                            {phase.phase === 'initial'
-                              ? '初始响应'
-                              : `跟进讨论${phase.trigger_persona_id ? `（由 ${personaMap[phase.trigger_persona_id]?.name || phase.trigger_persona_id} 触发）` : ''}`}
-                          </div>
-                          <ul className="dispatch-responders">
-                            {phase.responders.map((r) => (
-                              <li key={r.persona_id}>
-                                <strong style={{ color: personaMap[r.persona_id]?.avatar_color || undefined }}>
-                                  {personaMap[r.persona_id]?.name || r.persona_id}
-                                </strong>
-                                {' — '}
-                                {r.reason || '参与讨论'}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {chat.typingPersona && chat.streamingEntries.length === 0 && (
-                <div className="typing-indicator">
-                  <div className="typing-dots"><span /><span /><span /></div>
-                  {personaMap[chat.typingPersona]?.name || chat.typingPersona} 正在回复
-                </div>
-              )}
-              {voice.playingPersonaId && !chat.typingPersona && (
-                <div className="typing-indicator">
-                  <Volume2 size={14} />
-                  &nbsp;{personaMap[voice.playingPersonaId]?.name || voice.playingPersonaId} 正在播放语音
-                </div>
-              )}
-            </div>
-            <div className="message-input-bar">
-              {chat.mentionQuery !== null && chat.mentionResults.length > 0 && (
-                <div className="mention-dropdown">
-                  {chat.mentionResults.map((p) => (
-                    <div
-                      key={p.id}
-                      className="mention-item"
-                      onClick={() => chat.insertMention(p)}
-                    >
-                      <Avatar name={p.name} color={p.avatar_color || '#2D9C6F'} size={24} />
-                      <span className="mention-name">{p.name}</span>
-                      <span className="mention-role">{p.role}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <input
-                type="text"
-                value={chat.inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  chat.selectedRoom.room.type === 'group'
-                    ? '输入消息... 使用 @ 提及角色'
-                    : '输入消息...'
-                }
-                disabled={chat.sending}
-              />
-              {voice.voiceEnabled && selectedRoomId && (
-                <VoiceRecorder
-                  roomId={selectedRoomId}
-                  disabled={chat.sending}
-                  onTranscription={(text) => {
-                    if (!text.trim()) return
-                    chat.setInputValue('')
-                    chat.setDispatchSummary(null)
-                    voice.audioPlayerRef.current?.stop()
-                    setRefreshKey((k) => k + 1)
-                    setTimeout(chat.scrollToBottom, 100)
-                  }}
-                />
-              )}
-              <button
-                className={`voice-toggle-btn ${voice.voiceMuted ? 'muted' : ''}`}
-                onClick={voice.toggleVoice}
-                title={!voice.voiceEnabled ? '开启语音' : voice.voiceMuted ? '关闭语音模式' : '静音'}
-              >
-                {voice.voiceEnabled && !voice.voiceMuted ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              </button>
-              <button
-                className="live-coach-btn"
-                onClick={coaching.handleStartLiveCoaching}
-                title="求助教练"
-                disabled={coaching.coachingSending}
-              >
-                <Lightbulb size={18} />
-              </button>
-              <button className="send-btn" onClick={handleSend} disabled={!chat.inputValue.trim() || chat.sending}>
-                <Send size={18} />
-              </button>
-            </div>
+
+            <MessageList
+              messages={chat.selectedRoom.messages}
+              streamingEntries={chat.streamingEntries}
+              highlightedMessageId={analysis.highlightedMessageId}
+              personaMap={personaMap}
+              listRef={chat.messageListRef}
+              dispatchSummary={chat.dispatchSummary}
+              dispatchExpanded={chat.dispatchExpanded}
+              onToggleDispatch={() => chat.setDispatchExpanded((v) => !v)}
+              typingPersona={chat.typingPersona}
+              playingPersonaId={voice.playingPersonaId}
+              onClick={() => showExportMenu && setShowExportMenu(false)}
+            />
+
+            <ChatInput
+              value={chat.inputValue}
+              onInputChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onSend={handleSend}
+              sending={chat.sending}
+              placeholder={
+                chat.selectedRoom.room.type === 'group'
+                  ? '输入消息... 使用 @ 提及角色'
+                  : '输入消息...'
+              }
+              mentionQuery={chat.mentionQuery}
+              mentionResults={chat.mentionResults}
+              onInsertMention={chat.insertMention}
+              voiceEnabled={voice.voiceEnabled}
+              voiceMuted={voice.voiceMuted}
+              onToggleVoice={voice.toggleVoice}
+              roomId={selectedRoomId}
+              onVoiceTranscription={(text) => {
+                if (!text.trim()) return
+                chat.setInputValue('')
+                chat.setDispatchSummary(null)
+                voice.audioPlayerRef.current?.stop()
+                setRefreshKey((k) => k + 1)
+                setTimeout(chat.scrollToBottom, 100)
+              }}
+              onLiveCoachClick={coaching.handleStartLiveCoaching}
+              coachingSending={coaching.coachingSending}
+            />
           </div>
+
           {showEmotionSidebar && (
             <EmotionSidebar
               messages={chat.selectedRoom?.messages || []}
@@ -582,6 +402,13 @@ function AppInner() {
               onExpand={() => setShowEmotionCurve(true)}
             />
           )}
+
+          <ContextPanel
+            personas={roomPersonas}
+            collapsed={!showContextPanel}
+            onToggle={() => setShowContextPanel((v) => !v)}
+            onExpandEmotion={() => setShowEmotionCurve(true)}
+          />
           </div>
         ) : (
           <div className="welcome-page">
@@ -601,56 +428,19 @@ function AppInner() {
         )}
       </main>
 
-      {/* Coaching side panel */}
-      {coaching.coachingOpen && (
-        <aside className="coaching-panel">
-          <div className="coaching-header">
-            {coaching.coachingMode === 'live' ? <Lightbulb size={18} /> : <GraduationCap size={18} />}
-            <h3>{coaching.coachingMode === 'live' ? '实时教练' : 'AI Coach 复盘'}</h3>
-            <button className="coaching-close" onClick={() => coaching.setCoachingOpen(false)}>
-              <X size={18} />
-            </button>
-          </div>
-          <div className="coaching-messages" ref={coaching.coachingListRef}>
-            {coaching.coachingMessages.map((msg) => (
-              <div key={msg.id} className={`coaching-msg ${msg.role}`}>
-                <div className="coaching-msg-role">{msg.role === 'coach' ? 'Coach' : '你'}</div>
-                <div className="coaching-msg-bubble">
-                  <Markdown>{msg.content}</Markdown>
-                </div>
-              </div>
-            ))}
-            {coaching.coachingStreaming && (
-              <div className="coaching-msg coach streaming">
-                <div className="coaching-msg-role">Coach</div>
-                <div className="coaching-msg-bubble">
-                  <Markdown>{coaching.coachingStreaming}</Markdown>
-                  <span className="streaming-cursor" />
-                </div>
-              </div>
-            )}
-            {coaching.coachingSending && !coaching.coachingStreaming && coaching.coachingMessages.length === 0 && (
-              <div className="coaching-loading">
-                <div className="typing-dots"><span /><span /><span /></div>
-                Coach 正在思考
-              </div>
-            )}
-          </div>
-          <div className="coaching-input-bar">
-            <input
-              type="text"
-              value={coaching.coachingInput}
-              onChange={(e) => coaching.setCoachingInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); coaching.handleSendCoaching() } }}
-              placeholder="回复 Coach..."
-              disabled={coaching.coachingSending || (coaching.coachingMode === 'review' && !coaching.coachingSessionId)}
-            />
-            <button className="send-btn coaching-send" onClick={coaching.handleSendCoaching} disabled={!coaching.coachingInput.trim() || coaching.coachingSending || (coaching.coachingMode === 'review' && !coaching.coachingSessionId)}>
-              <Send size={16} />
-            </button>
-          </div>
-        </aside>
-      )}
+      <CoachingPanel
+        open={coaching.coachingOpen}
+        mode={coaching.coachingMode}
+        messages={coaching.coachingMessages}
+        streamingContent={coaching.coachingStreaming}
+        sending={coaching.coachingSending}
+        inputValue={coaching.coachingInput}
+        onInputChange={coaching.setCoachingInput}
+        onSend={coaching.handleSendCoaching}
+        onClose={() => coaching.setCoachingOpen(false)}
+        sessionId={coaching.coachingSessionId}
+        listRef={coaching.coachingListRef}
+      />
 
       <CreateRoomDialog
         open={showCreateDialog}
@@ -687,127 +477,15 @@ function AppInner() {
 
       {/* Analysis result dialog */}
       {analysis.analysisResult && (
-        <div className="dialog-overlay" onClick={() => analysis.setAnalysisResult(null)}>
-          <div className="dialog analysis-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="analysis-header">
-              <h3>对话分析报告</h3>
-              <button className="analysis-close" onClick={() => analysis.setAnalysisResult(null)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Historical report selector */}
-            {analysis.analysisReportList.length > 1 && (
-              <div className="analysis-report-selector">
-                <select
-                  value={analysis.analysisResult.id}
-                  onChange={(e) => analysis.handleSelectReport(Number(e.target.value))}
-                >
-                  {analysis.analysisReportList.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.created_at ? new Date(r.created_at).toLocaleString() : `报告 #${r.id}`}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="analysis-new-btn"
-                  onClick={analysis.handleGenerateNewReport}
-                  disabled={analysis.analyzingRoom}
-                >
-                  {analysis.analyzingRoom ? '生成中...' : '+ 新报告'}
-                </button>
-              </div>
-            )}
-            {analysis.analysisReportList.length <= 1 && (
-              <div className="analysis-report-selector">
-                <span className="analysis-report-date">
-                  {analysis.analysisResult.created_at ? new Date(analysis.analysisResult.created_at).toLocaleString() : ''}
-                </span>
-                <button
-                  className="analysis-new-btn"
-                  onClick={analysis.handleGenerateNewReport}
-                  disabled={analysis.analyzingRoom}
-                >
-                  {analysis.analyzingRoom ? '生成中...' : '重新分析'}
-                </button>
-              </div>
-            )}
-
-            <p className="analysis-summary">{analysis.analysisResult.summary}</p>
-
-            {/* Resistance ranking cards */}
-            {analysis.analysisResult.content.resistance_ranking.length > 0 && (
-              <div className="analysis-section">
-                <h4>阻力排名</h4>
-                <div className="analysis-cards">
-                  {analysis.analysisResult.content.resistance_ranking.map((item, i) => {
-                    const hasLinks = item.message_indices && item.message_indices.length > 0 && analysis.analysisResult!.content.message_id_map
-                    return (
-                      <div key={i} className={`analysis-card${hasLinks ? ' clickable' : ''}`}
-                        onClick={() => hasLinks && analysis.handleScrollToMessage(item.message_indices, analysis.analysisResult!.content.message_id_map)}
-                      >
-                        <div className="analysis-card-header">
-                          <span className="analysis-card-name">{item.persona_name}</span>
-                          <span className={`analysis-card-score ${item.score >= 0 ? 'positive' : 'negative'}`}>
-                            {item.score > 0 ? '+' : ''}{item.score}
-                          </span>
-                        </div>
-                        <div className="analysis-card-body">{item.reason}</div>
-                        {hasLinks && (
-                          <div className="analysis-card-link">点击查看对话原文 →</div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Effective arguments cards */}
-            {analysis.analysisResult.content.effective_arguments.length > 0 && (
-              <div className="analysis-section">
-                <h4>有效论点</h4>
-                <div className="analysis-cards">
-                  {analysis.analysisResult.content.effective_arguments.map((item, i) => {
-                    const hasLinks = item.message_indices && item.message_indices.length > 0 && analysis.analysisResult!.content.message_id_map
-                    return (
-                      <div key={i} className={`analysis-card argument${hasLinks ? ' clickable' : ''}`}
-                        onClick={() => hasLinks && analysis.handleScrollToMessage(item.message_indices, analysis.analysisResult!.content.message_id_map)}
-                      >
-                        <div className="analysis-card-header">
-                          <span className="analysis-card-argument">{item.argument}</span>
-                          <span className="analysis-card-target">→ {item.target_persona}</span>
-                        </div>
-                        <div className="analysis-card-body">{item.effectiveness}</div>
-                        {hasLinks && (
-                          <div className="analysis-card-link">点击查看对话原文 →</div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Communication suggestions */}
-            {analysis.analysisResult.content.communication_suggestions.length > 0 && (
-              <div className="analysis-section">
-                <h4>沟通建议</h4>
-                <div className="analysis-cards">
-                  {analysis.analysisResult.content.communication_suggestions.map((item, i) => (
-                    <div key={i} className="analysis-card suggestion">
-                      <div className="analysis-card-header">
-                        <span className="analysis-card-name">{item.persona_name}</span>
-                        <span className={`suggestion-priority ${item.priority}`}>{item.priority}</span>
-                      </div>
-                      <div className="analysis-card-body">{item.suggestion}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <AnalysisPanel
+          result={analysis.analysisResult}
+          reportList={analysis.analysisReportList}
+          analyzingRoom={analysis.analyzingRoom}
+          onClose={() => analysis.setAnalysisResult(null)}
+          onSelectReport={analysis.handleSelectReport}
+          onGenerateNewReport={analysis.handleGenerateNewReport}
+          onScrollToMessage={analysis.handleScrollToMessage}
+        />
       )}
 
       <BattlePrepDialog
