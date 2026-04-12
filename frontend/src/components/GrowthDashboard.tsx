@@ -9,12 +9,15 @@ import {
   Tooltip,
 } from 'recharts'
 import Markdown from 'react-markdown'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Share2 } from 'lucide-react'
 import {
   fetchGrowthDashboard,
   generateGrowthInsight,
+  generateProfileCard,
   type GrowthDashboard as GrowthDashboardData,
+  type ProfileCard as ProfileCardData,
 } from '../services/api'
+import ProfileCardDialog from './ProfileCardDialog'
 import './GrowthDashboard.css'
 
 const DIMENSION_LABELS: Record<string, string> = {
@@ -59,6 +62,9 @@ export default function GrowthDashboard({ onCreateRoom }: Props) {
   const [loading, setLoading] = useState(true)
   const [insight, setInsight] = useState<string | null>(null)
   const [insightLoading, setInsightLoading] = useState(false)
+  const [profileCard, setProfileCard] = useState<ProfileCardData | null>(null)
+  const [profileCardLoading, setProfileCardLoading] = useState(false)
+  const [showProfileCard, setShowProfileCard] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -67,6 +73,19 @@ export default function GrowthDashboard({ onCreateRoom }: Props) {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  const handleGenerateCard = async () => {
+    setProfileCardLoading(true)
+    try {
+      const card = await generateProfileCard()
+      setProfileCard(card)
+      setShowProfileCard(true)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setProfileCardLoading(false)
+    }
+  }
 
   const handleGenerateInsight = async () => {
     setInsightLoading(true)
@@ -284,6 +303,25 @@ export default function GrowthDashboard({ onCreateRoom }: Props) {
           </div>
         )}
       </div>
+
+      {/* Profile Card */}
+      <div className="growth-card-section">
+        <button
+          className="profile-card-btn"
+          onClick={handleGenerateCard}
+          disabled={profileCardLoading || data.overview.total_evaluations < 2}
+          title={data.overview.total_evaluations < 2 ? `再完成 ${2 - data.overview.total_evaluations} 次练习即可解锁` : '生成沟通力名片'}
+        >
+          {profileCardLoading ? <Loader2 size={14} className="spin" /> : <Share2 size={14} />}
+          {profileCardLoading ? '生成中...' : '生成我的名片'}
+        </button>
+      </div>
+
+      <ProfileCardDialog
+        open={showProfileCard}
+        onClose={() => setShowProfileCard(false)}
+        data={profileCard}
+      />
     </div>
   )
 }

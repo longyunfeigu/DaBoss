@@ -307,3 +307,30 @@
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* Profile Card button */
+.growth-card-section {
+  margin-top: 16px;
+  text-align: center;
+}
+.profile-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.profile-card-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.profile-card-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
