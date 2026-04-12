@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { MessageSquare, Users, Plus, Trash2 } from 'lucide-react'
 import { fetchRooms, deleteRoom, type ChatRoom } from '../services/api'
+import ConfirmDialog from './layout/ConfirmDialog'
 import './RoomList.css'
 
 interface RoomListProps {
@@ -16,6 +17,7 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
   const [rooms, setRooms] = useState<ChatRoom[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ChatRoom | null>(null)
   const location = useLocation()
 
   useEffect(() => {
@@ -26,17 +28,22 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
       .finally(() => setLoading(false))
   }, [refreshKey])
 
-  const handleDelete = async (e: React.MouseEvent, room: ChatRoom) => {
+  const handleDeleteClick = (e: React.MouseEvent, room: ChatRoom) => {
     e.stopPropagation()
-    e.preventDefault() // prevent Link navigation
-    if (!confirm(`确定删除「${room.name}」？消息将一并删除。`)) return
+    e.preventDefault()
+    setDeleteTarget(room)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteRoom(room.id)
-      setRooms((prev) => prev.filter((r) => r.id !== room.id))
-      onRoomDeleted(room.id)
+      await deleteRoom(deleteTarget.id)
+      setRooms((prev) => prev.filter((r) => r.id !== deleteTarget.id))
+      onRoomDeleted(deleteTarget.id)
     } catch (err) {
       console.error('Delete failed:', err)
     }
+    setDeleteTarget(null)
   }
 
   /** Check if a room is active by URL or by selectedRoomId prop */
@@ -72,7 +79,7 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
       </div>
       <button
         className="room-delete-btn"
-        onClick={(e) => handleDelete(e, room)}
+        onClick={(e) => handleDeleteClick(e, room)}
         title="删除聊天室"
       >
         <Trash2 size={13} />
@@ -106,6 +113,16 @@ export default function RoomList({ selectedRoomId, onSelectRoom, onCreateRoom, o
           {battleRooms.map(renderRoom)}
         </>
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="删除对话"
+        message={`确定删除「${deleteTarget?.name ?? ''}」？所有消息将一并删除，此操作无法撤销。`}
+        confirmLabel="删除"
+        cancelLabel="取消"
+        danger
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
