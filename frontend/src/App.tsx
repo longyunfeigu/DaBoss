@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
-import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX } from 'lucide-react'
+import { MessageCircle, Layers, Plus, BarChart3, BarChart2, GraduationCap, Download, FileText, FileDown, Send, ClipboardList, X, Building2, TrendingUp, Activity, Lightbulb, Volume2, VolumeX, Zap, Flag } from 'lucide-react'
 import './App.css'
 import Avatar from './components/Avatar'
 import RoomList from './components/RoomList'
@@ -11,6 +11,8 @@ import OrganizationDialog from './components/OrganizationDialog'
 import EmotionCurve from './components/EmotionCurve'
 import EmotionSidebar from './components/EmotionSidebar'
 import GrowthDashboard from './components/GrowthDashboard'
+import BattlePrepDialog from './components/BattlePrepDialog'
+import CheatSheetComponent from './components/CheatSheet'
 import VoiceRecorder from './components/VoiceRecorder'
 import { AudioPlayQueue } from './services/audioPlayer'
 import {
@@ -37,6 +39,8 @@ import {
   type RoundEndData,
   type AnalysisReport,
   type AnalysisReportSummary,
+  generateCheatSheet,
+  type CheatSheet as CheatSheetData,
 } from './services/api'
 
 const API_BASE = '/api/v1/stakeholder'
@@ -130,6 +134,11 @@ function App() {
   const [analyzingRoom, setAnalyzingRoom] = useState(false)
   const [analysisReportList, setAnalysisReportList] = useState<AnalysisReportSummary[]>([])
   const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null)
+  // Battle prep state
+  const [showBattlePrep, setShowBattlePrep] = useState(false)
+  const [cheatSheetData, setCheatSheetData] = useState<CheatSheetData | null>(null)
+  const [cheatSheetPersona, setCheatSheetPersona] = useState('')
+  const [battlePrepRoundCount, setBattlePrepRoundCount] = useState(0)
   // Voice state
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [voiceMuted, setVoiceMuted] = useState(false)
@@ -296,6 +305,7 @@ function App() {
   const handleSelectRoom = async (room: ChatRoom) => {
     setShowGrowth(false)
     setSelectedRoomId(room.id)
+    setBattlePrepRoundCount(0)
     setTypingPersona(null)
     setStreamingContent({})
     try {
@@ -318,6 +328,33 @@ function App() {
     }
   }
 
+  const handleBattlePrepStarted = async (roomId: number) => {
+    setShowBattlePrep(false)
+    setBattlePrepRoundCount(0)
+    setRefreshKey((k) => k + 1)
+    setSelectedRoomId(roomId)
+    setShowGrowth(false)
+    try {
+      const detail = await fetchRoomDetail(roomId)
+      setSelectedRoom(detail)
+    } catch {
+      setSelectedRoom(null)
+    }
+  }
+
+  const handleEndBattle = async () => {
+    if (!selectedRoomId || !selectedRoom) return
+    const personaId = selectedRoom.room.persona_ids[0] || ''
+    const persona = personaMap[personaId]
+    setCheatSheetPersona(persona?.name || '对方')
+    try {
+      const sheet = await generateCheatSheet(selectedRoomId)
+      setCheatSheetData(sheet)
+    } catch (e: any) {
+      alert(e?.message || '话术纸条生成失败')
+    }
+  }
+
   const handleSend = async () => {
     const content = inputValue.trim()
     if (!content || !selectedRoomId || sending) return
@@ -333,6 +370,15 @@ function App() {
 
     try {
       await sendMessage(selectedRoomId, content)
+      // Track battle prep rounds
+      if (selectedRoom?.room.type === 'battle_prep') {
+        const newCount = battlePrepRoundCount + 1
+        setBattlePrepRoundCount(newCount)
+        if (newCount >= 12) {
+          // Auto-trigger cheat sheet after a short delay for the last reply
+          setTimeout(() => handleEndBattle(), 3000)
+        }
+      }
       // SSE will push the messages -- just refresh room list for ordering
       setRefreshKey((k) => k + 1)
       setTimeout(scrollToBottom, 100)
@@ -757,6 +803,14 @@ function App() {
           refreshKey={refreshKey}
         />
 
+        <button
+          className="battle-prep-btn"
+          onClick={() => setShowBattlePrep(true)}
+        >
+          <Zap size={16} />
+          <span>紧急备战</span>
+        </button>
+
         {/* Growth tab button */}
         <button
           className={`growth-btn ${showGrowth ? 'active' : ''}`}
@@ -780,7 +834,7 @@ function App() {
               <div className="chat-header-left">
                 <h3>{selectedRoom.room.name}</h3>
                 <span className={`room-type-badge ${selectedRoom.room.type}`}>
-                  {selectedRoom.room.type === 'private' ? '私聊' : '群聊'}
+                  {selectedRoom.room.type === 'private' ? '私聊' : selectedRoom.room.type === 'group' ? '群聊' : '备战'}
                 </span>
               </div>
               <div className="chat-header-actions">
@@ -855,6 +909,16 @@ function App() {
                 </div>
               </div>
             </div>
+            {selectedRoom.room.type === 'battle_prep' && (
+              <div className="battle-prep-bar">
+                <Zap size={14} />
+                <span>备战模式 · 已练 {battlePrepRoundCount}/12 轮</span>
+                <button className="end-battle-btn" onClick={handleEndBattle}>
+                  <Flag size={14} />
+                  结束备战
+                </button>
+              </div>
+            )}
             <div className="message-list" ref={messageListRef} onClick={() => showExportMenu && setShowExportMenu(false)}>
               {selectedRoom.messages.length === 0 && streamingEntries.length === 0 ? (
                 <div className="empty-messages">
@@ -1293,6 +1357,19 @@ function App() {
           </div>
         </div>
       )}
+
+      <BattlePrepDialog
+        open={showBattlePrep}
+        onClose={() => setShowBattlePrep(false)}
+        onStarted={handleBattlePrepStarted}
+      />
+
+      <CheatSheetComponent
+        open={cheatSheetData !== null}
+        onClose={() => setCheatSheetData(null)}
+        data={cheatSheetData}
+        personaName={cheatSheetPersona}
+      />
     </div>
   )
 }

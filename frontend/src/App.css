@@ -1157,6 +1157,57 @@
   color: #16a34a;
 }
 
+/* Battle Prep sidebar button */
+.battle-prep-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.battle-prep-btn:hover {
+  opacity: 0.9;
+}
+
+/* Battle Prep status bar in chat */
+.battle-prep-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f5f3ff;
+  border-bottom: 1px solid #e9e5ff;
+  font-size: 13px;
+  color: #4f46e5;
+  font-weight: 500;
+}
+.battle-prep-bar .end-battle-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid #4f46e5;
+  border-radius: 6px;
+  background: white;
+  color: #4f46e5;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.battle-prep-bar .end-battle-btn:hover {
+  background: #f5f3ff;
+}
+
 /* Message highlight animation for scroll-to-message */
 .message.highlighted {
   animation: message-highlight 2.5s ease-out;
