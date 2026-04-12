@@ -35,6 +35,7 @@ import {
   type ChatRoom,
   type CheatSheet as CheatSheetData,
 } from '../services/api'
+import '../App.css'
 import './ChatPage.css'
 
 /* ------------------------------------------------------------------ */
