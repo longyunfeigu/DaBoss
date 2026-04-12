@@ -10,7 +10,11 @@ const LogoSvg: React.FC<{ size?: number }> = ({ size = 22 }) => (
   </svg>
 )
 
-const TopBar: React.FC = () => {
+interface TopBarProps {
+  onSearchClick?: () => void
+}
+
+const TopBar: React.FC<TopBarProps> = ({ onSearchClick }) => {
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -18,7 +22,18 @@ const TopBar: React.FC = () => {
           <LogoSvg size={22} />
           <span className="topbar-wordmark">DaBoss</span>
         </div>
-        <div className="topbar-search" role="button" tabIndex={0}>
+        <div
+          className="topbar-search"
+          role="button"
+          tabIndex={0}
+          onClick={onSearchClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onSearchClick?.()
+            }
+          }}
+        >
           <span className="topbar-search-text">搜索或输入命令...</span>
           <kbd className="topbar-search-kbd">&#8984;K</kbd>
         </div>
