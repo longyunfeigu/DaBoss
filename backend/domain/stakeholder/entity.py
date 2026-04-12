@@ -12,7 +12,7 @@ from typing import Optional
 
 from domain.common.exceptions import DomainValidationException
 
-_ROOM_TYPES = {"private", "group"}
+_ROOM_TYPES = {"private", "group", "battle_prep"}
 _SENDER_TYPES = {"user", "persona", "system"}
 
 
@@ -30,11 +30,11 @@ def _ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
 
 @dataclass
 class ChatRoom:
-    """A chat room for stakeholder simulation (private or group)."""
+    """A chat room for stakeholder simulation (private, group, or battle_prep)."""
 
     id: Optional[int]
     name: str
-    type: str  # private | group
+    type: str  # private | group | battle_prep
     persona_ids: list[str] = field(default_factory=list)
     scenario_id: Optional[int] = None
     created_at: Optional[datetime] = None

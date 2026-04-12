@@ -1,5 +1,5 @@
 # input: Pydantic BaseModel
-# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs
+# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO
 # owner: wanhua.gu
 # pos: 应用层 - 聊天室、消息、角色、场景数据传输对象；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """DTOs for stakeholder chat room and message operations."""
@@ -16,7 +16,7 @@ class CreateChatRoomDTO(BaseModel):
     """Input DTO for creating a chat room."""
 
     name: str = Field(..., min_length=1, max_length=255)
-    type: str = Field(..., pattern=r"^(private|group)$")
+    type: str = Field(..., pattern=r"^(private|group|battle_prep)$")
     persona_ids: list[str] = Field(..., min_length=1)
     scenario_id: Optional[int] = None
 
@@ -402,3 +402,65 @@ class GrowthInsightDTO(BaseModel):
     """LLM-generated cross-session growth insight."""
 
     insight: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Battle Prep DTOs
+# ---------------------------------------------------------------------------
+
+
+class BattlePrepGenerateDTO(BaseModel):
+    """Input: user's meeting description."""
+    description: str = Field(..., min_length=10, max_length=5000)
+
+
+class BattlePrepResultDTO(BaseModel):
+    """Output: AI-generated persona + scenario + training points."""
+    persona_name: str
+    persona_role: str
+    persona_style: str
+    scenario_context: str
+    training_points: list[str]
+
+
+class StartBattleDTO(BaseModel):
+    """Input: confirmed config from user."""
+    persona_name: str = Field(..., min_length=1, max_length=100)
+    persona_role: str = Field(..., min_length=1, max_length=200)
+    persona_style: str = Field(..., min_length=1, max_length=2000)
+    scenario_context: str = Field(..., min_length=1, max_length=5000)
+    selected_training_points: list[str] = Field(..., min_length=1, max_length=5)
+    difficulty: str = Field(default="normal", pattern=r"^(easy|normal|hard)$")
+
+
+class TacticItem(BaseModel):
+    """A single tactic in the cheat sheet."""
+    situation: str
+    response: str
+
+
+class CheatSheetDTO(BaseModel):
+    """Output: cheat sheet for the meeting."""
+    opening: str
+    key_tactics: list[TacticItem]
+    pitfalls: list[str]
+    bottom_line: str
+
+
+# ---------------------------------------------------------------------------
+# Profile Card DTOs
+# ---------------------------------------------------------------------------
+
+
+class ProfileTag(BaseModel):
+    """A tag on the profile card."""
+    text: str
+    type: str = Field(..., pattern=r"^(strength|weakness|trait)$")
+
+
+class ProfileCardDTO(BaseModel):
+    """Output: profile card data."""
+    style_label: str
+    tags: list[ProfileTag]
+    summary: str
+    scores: dict[str, float]
