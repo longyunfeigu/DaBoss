@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Plus,
   Pencil,
@@ -70,8 +70,16 @@ function PersonasTab() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(false)
+  const formRef = useRef<HTMLDivElement>(null)
 
   const showForm = isNew || editing !== null
+
+  // Auto-scroll to form when it appears
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [showForm, editing])
 
   // Load teams when org changes
   useEffect(() => {
@@ -231,7 +239,7 @@ function PersonasTab() {
       </div>
 
       {showForm && (
-        <div className="settings-form-panel">
+        <div className="settings-form-panel" ref={formRef}>
           <h4>{isNew ? '新建角色' : '编辑角色'}</h4>
 
           <div className="settings-avatar-preview">
