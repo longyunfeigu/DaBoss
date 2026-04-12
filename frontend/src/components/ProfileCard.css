@@ -1,0 +1,267 @@
+/* ============================================================
+   ProfileCard — social sharing communication style card
+   ============================================================ */
+
+/* Card */
+.profile-card {
+  width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+/* Header */
+.profile-card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.profile-card-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: sans-serif;
+}
+
+.profile-card-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-card-label {
+  font-size: 11px;
+  color: #aaa;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.profile-card-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.2;
+}
+
+/* Tags row */
+.profile-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.profile-tag {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.profile-tag.strength {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.profile-tag.weakness {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.profile-tag.trait {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+/* Dimension bars */
+.profile-bars {
+  margin-bottom: 16px;
+}
+
+.profile-bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.profile-bar-label {
+  width: 70px;
+  font-size: 12px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.profile-bar-track {
+  flex: 1;
+  background: #f0f0f0;
+  border-radius: 10px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.profile-bar-fill {
+  border-radius: 10px;
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.profile-bar-score {
+  width: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  color: #333;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+/* Summary quote */
+.profile-card-summary {
+  font-size: 13px;
+  color: #666;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* Footer */
+.profile-card-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #ccc;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   ProfileCardDialog overlay and wrapper
+   ============================================================ */
+
+.pc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+
+.pc-dialog {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #fff);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg, 0 20px 60px rgba(0, 0, 0, 0.18));
+  overflow: hidden;
+}
+
+.pc-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.pc-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #111);
+  margin: 0;
+}
+
+.pc-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  font-size: 16px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.pc-close-btn:hover {
+  background: var(--surface-hover, #f3f4f6);
+  color: var(--text-primary, #111);
+}
+
+.pc-card-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  background: #f5f5f5;
+}
+
+.pc-footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border, #e5e7eb);
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.pc-btn-download {
+  flex: 1;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pc-btn-download:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.pc-btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Placeholder shown when data is insufficient */
+.pc-placeholder {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted, #888);
+  font-size: 14px;
+  line-height: 1.7;
+}
