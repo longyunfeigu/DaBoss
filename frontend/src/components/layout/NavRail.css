@@ -55,3 +55,10 @@
   color: var(--green);
   opacity: 1;
 }
+
+/* ---- Responsive: hide NavRail on mobile ---- */
+@media (max-width: 767px) {
+  .navrail {
+    display: none;
+  }
+}

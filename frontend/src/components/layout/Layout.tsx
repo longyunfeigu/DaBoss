@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import TopBar from './TopBar'
 import NavRail from './NavRail'
+import BottomTabBar from './BottomTabBar'
 import CommandPalette from './CommandPalette'
 import { useCommandPalette } from '../../hooks/useCommandPalette'
 import { useAppContext } from '../../contexts/AppContext'
@@ -29,6 +30,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <BottomTabBar />
       <CommandPalette
         isOpen={palette.isOpen}
         query={palette.query}

@@ -16,3 +16,19 @@
   overflow-y: auto;
   background: var(--bg-base);
 }
+
+/* ---- Responsive: mobile < 768px ---- */
+@media (max-width: 767px) {
+  .app-content {
+    /* Account for fixed BottomTabBar */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .topbar-search {
+    display: none;
+  }
+
+  .topbar-level-pill {
+    display: none;
+  }
+}

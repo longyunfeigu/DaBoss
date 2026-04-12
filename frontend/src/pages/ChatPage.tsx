@@ -13,6 +13,8 @@ import {
   Zap,
   Flag,
   Loader2,
+  ArrowLeft,
+  X,
 } from 'lucide-react'
 import { useAppContext } from '../contexts/AppContext'
 import { ChatProvider, useChatContext } from '../contexts/ChatContext'
@@ -42,11 +44,13 @@ import './ChatPage.css'
 function ChatArea() {
   const { personaMap } = useAppContext()
   const { chat, voice, coaching, analysis } = useChatContext()
+  const navigate = useNavigate()
 
   const [showEmotionSidebar, setShowEmotionSidebar] = useState(false)
   const [showEmotionCurve, setShowEmotionCurve] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [showContextPanel, setShowContextPanel] = useState(false)
+  const [mobileSheet, setMobileSheet] = useState<string | null>(null)
 
   // Battle prep state
   const [battlePrepRoundCount, setBattlePrepRoundCount] = useState(0)
@@ -123,6 +127,13 @@ function ChatArea() {
       {/* Chat header */}
       <div className="chat-page-header">
         <div className="chat-page-header-left">
+          <button
+            className="chat-page-back-btn"
+            onClick={() => navigate('/chat')}
+            title="返回对话列表"
+          >
+            <ArrowLeft size={18} />
+          </button>
           <h3>{chat.selectedRoom?.room.name ?? ''}</h3>
           {chat.selectedRoom && (
             <span className={`room-type-badge ${chat.selectedRoom.room.type}`}>
@@ -250,6 +261,24 @@ function ChatArea() {
             onClick={() => showExportMenu && setShowExportMenu(false)}
           />
 
+          {/* Mobile pill buttons above input */}
+          <div className="chat-mobile-pills">
+            {[
+              { key: 'cheatsheet', label: '锦囊' },
+              { key: 'coaching', label: '教练' },
+              { key: 'analysis', label: '评分' },
+              { key: 'emotion', label: '情绪' },
+            ].map((pill) => (
+              <button
+                key={pill.key}
+                className={`chat-mobile-pill-btn${mobileSheet === pill.key ? ' active' : ''}`}
+                onClick={() => setMobileSheet(mobileSheet === pill.key ? null : pill.key)}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+
           <ChatInput
             value={chat.inputValue}
             onInputChange={handleInputChange}
@@ -339,6 +368,32 @@ function ChatArea() {
         data={cheatSheetData}
         personaName={cheatSheetPersona}
       />
+
+      {/* Mobile bottom sheet */}
+      {mobileSheet && (
+        <div className="chat-mobile-sheet">
+          <div className="chat-mobile-sheet-header">
+            <h4>
+              {mobileSheet === 'cheatsheet' && '锦囊'}
+              {mobileSheet === 'coaching' && '教练'}
+              {mobileSheet === 'analysis' && '评分'}
+              {mobileSheet === 'emotion' && '情绪'}
+            </h4>
+            <button
+              className="chat-mobile-sheet-close"
+              onClick={() => setMobileSheet(null)}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+            {mobileSheet === 'cheatsheet' && '点击上方"结束备战"按钮后，可在此查看话术锦囊。'}
+            {mobileSheet === 'coaching' && '点击开始获取AI教练的实时指导建议。'}
+            {mobileSheet === 'analysis' && '完成对话后，可在此查看对话评分。'}
+            {mobileSheet === 'emotion' && '对话进行中会在此展示情绪变化曲线。'}
+          </p>
+        </div>
+      )}
     </>
   )
 }
@@ -357,7 +412,7 @@ export default function ChatPage() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   return (
-    <div className="chat-page">
+    <div className={`chat-page${roomId ? ' has-room' : ''}`}>
       {/* Left column: room list */}
       <div className="chat-page-left">
         <RoomList

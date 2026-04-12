@@ -277,3 +277,218 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ---- Mobile back button (hidden on desktop) ---- */
+.chat-page-back-btn {
+  display: none;
+}
+
+/* ---- Mobile pill buttons above input ---- */
+.chat-mobile-pills {
+  display: none;
+}
+
+/* ---- Mobile bottom sheet overlay ---- */
+.chat-mobile-sheet {
+  display: none;
+}
+
+/* ================================================
+   Responsive: Tablet (768-1023px)
+   ================================================ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Room list collapsible on tablet */
+  .chat-page-left {
+    width: 56px;
+    min-width: 56px;
+    overflow: hidden;
+    transition: width 0.2s ease;
+  }
+
+  .chat-page-left.expanded {
+    width: 200px;
+    min-width: 200px;
+  }
+
+  /* Context panel collapsible on tablet */
+  .chat-page-right {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-left: none;
+    transition: width 0.2s ease;
+  }
+
+  .chat-page-right.expanded {
+    width: 210px;
+    min-width: 210px;
+    border-left: 1px solid var(--border, #e5e7eb);
+  }
+}
+
+/* ================================================
+   Responsive: Mobile (< 768px)
+   ================================================ */
+@media (max-width: 767px) {
+  .chat-page {
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Room list: full view when no room selected */
+  .chat-page-left {
+    width: 100%;
+    min-width: 100%;
+    flex: 1;
+    border-right: none;
+  }
+
+  /* When a room is selected, hide the room list */
+  .chat-page.has-room .chat-page-left {
+    display: none;
+  }
+
+  /* Center: full-screen chat */
+  .chat-page-center {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* Hide right panel entirely on mobile */
+  .chat-page-right {
+    display: none !important;
+  }
+
+  /* Show back button on mobile */
+  .chat-page-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-right: 4px;
+  }
+
+  .chat-page-back-btn:hover {
+    background: var(--surface-hover, #f3f4f6);
+  }
+
+  /* Simplify header on mobile */
+  .chat-page-header {
+    padding: 8px 12px;
+    height: 48px;
+  }
+
+  .chat-page-header-actions {
+    gap: 2px;
+  }
+
+  /* Hide some desktop-only header buttons on mobile */
+  .chat-page-header-actions .header-action-btn:not(.coaching) {
+    display: none;
+  }
+
+  /* Mobile pill buttons */
+  .chat-mobile-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    background: var(--bg-card, #fff);
+    border-top: 1px solid var(--border, #e5e7eb);
+  }
+
+  .chat-mobile-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chat-mobile-pill-btn {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary, #6b7280);
+    background: var(--bg-base, #f9fafb);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 99px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .chat-mobile-pill-btn.active {
+    color: var(--green, #2D9C6F);
+    background: var(--green-soft, rgba(45, 156, 111, 0.08));
+    border-color: var(--green, #2D9C6F);
+  }
+
+  /* Mobile bottom sheet */
+  .chat-mobile-sheet {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 50vh;
+    background: var(--bg-card, #fff);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    z-index: 90;
+    padding: 16px;
+    overflow-y: auto;
+    animation: sheet-slide-up 0.2s ease-out;
+  }
+
+  @keyframes sheet-slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .chat-mobile-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .chat-mobile-sheet-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+  }
+
+  .chat-mobile-sheet-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: var(--bg-base, #f3f4f6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+  }
+
+  /* Empty state on mobile */
+  .chat-page-empty {
+    display: none;
+  }
+
+  /* Battle bar compact on mobile */
+  .chat-page-battle-bar {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
