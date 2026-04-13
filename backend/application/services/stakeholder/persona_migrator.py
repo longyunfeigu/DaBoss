@@ -328,16 +328,12 @@ async def _record_failure(repo, v1: Persona, error: str) -> None:
             role=v1.role,
         )
     except Exception as exc:  # pragma: no cover - defensive
-        logger.error(
-            "migrate_save_error_failed", persona_id=v1.id, error=str(exc)
-        )
+        logger.error("migrate_save_error_failed", persona_id=v1.id, error=str(exc))
 
 
 def print_report(report: MigrationReport) -> None:
     """Print the canonical summary line per AC6."""
-    print(
-        f"Migrated: {report.migrated}, Failed: {report.failed}, Skipped: {report.skipped}"
-    )
+    print(f"Migrated: {report.migrated}, Failed: {report.failed}, Skipped: {report.skipped}")
 
 
 # re-export helper used in error metadata

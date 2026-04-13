@@ -436,8 +436,7 @@ async def test_script_report_format_matches_spec(capsys):
     personas = [_canonical_v1_persona(f"p{i}") for i in range(5)]
     llm = AsyncMock()
     llm.generate.side_effect = [
-        LLMResponse(content=json.dumps(_canonical_llm_json(f"p{i}")), model="m")
-        for i in range(5)
+        LLMResponse(content=json.dumps(_canonical_llm_json(f"p{i}")), model="m") for i in range(5)
     ]
     repo = _FakeRepo()
 
