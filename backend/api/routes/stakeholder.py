@@ -205,6 +205,22 @@ async def patch_persona_v2_endpoint(
     return success_response(data=dto.model_dump(mode="json"))
 
 
+@router.post(
+    "/personas/{persona_id}/start-battle",
+    summary="从已有 persona 开演练 (Story 2.8)",
+    status_code=201,
+)
+async def start_battle_from_persona(
+    persona_id: str,
+    svc=Depends(get_battle_prep_service),
+):
+    try:
+        room = await svc.create_room_from_persona(persona_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Persona not found")
+    return success_response(data=room.model_dump(mode="json"))
+
+
 # ---------------------------------------------------------------------------
 # ChatRoom endpoints (Story 2.1)
 # ---------------------------------------------------------------------------

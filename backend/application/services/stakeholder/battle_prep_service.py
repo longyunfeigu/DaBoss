@@ -223,6 +223,24 @@ class BattlePrepService:
 
         return room
 
+    async def create_room_from_persona(self, persona_id: str) -> ChatRoomDTO:
+        """Story 2.8 (AC1): create a private chatroom using an existing persona.
+
+        Unlike start_battle (which creates a brand new temp bp-* persona), this
+        reuses an already-persisted persona (v1 markdown or v2 DB). Called from
+        the Persona Editor page's "开始演练" button.
+        """
+        persona = self._persona_loader.get_persona(persona_id)
+        if persona is None:
+            raise ValueError(f"Persona {persona_id} not found")
+        return await self._chatroom_service.create_room(
+            CreateChatRoomDTO(
+                name=f"演练: {persona.name}",
+                type="private",
+                persona_ids=[persona_id],
+            )
+        )
+
     async def generate_cheat_sheet(self, room_id: int) -> CheatSheetDTO:
         """Post-conversation: generate cheat sheet from conversation history."""
         detail = await self._chatroom_service.get_room_detail(room_id, message_limit=200)
