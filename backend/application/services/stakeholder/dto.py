@@ -1,5 +1,5 @@
 # input: Pydantic BaseModel
-# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO, PersonaBuildRequestDTO (Story 2.5)
+# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO, PersonaBuildRequestDTO (Story 2.5), PersonaV2DTO/PersonaPatchV2DTO + 5-layer sub-DTOs (Story 2.7)
 # owner: wanhua.gu
 # pos: 应用层 - 聊天室、消息、角色、场景数据传输对象；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """DTOs for stakeholder chat room and message operations."""
@@ -490,3 +490,81 @@ class PersonaBuildRequestDTO(BaseModel):
     target_persona_id: Optional[str] = None
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     role: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+# ---------------------------------------------------------------------------
+# Story 2.7 — 5-layer Persona editor DTOs
+# ---------------------------------------------------------------------------
+
+
+class HardRuleDTO(BaseModel):
+    statement: str
+    severity: str = "medium"
+
+
+class IdentityDTO(BaseModel):
+    background: str = ""
+    core_values: list[str] = Field(default_factory=list)
+    hidden_agenda: Optional[str] = None
+
+
+class ExpressionDTO(BaseModel):
+    tone: str = ""
+    catchphrases: list[str] = Field(default_factory=list)
+    interruption_tendency: str = "medium"
+
+
+class DecisionDTO(BaseModel):
+    style: str = ""
+    risk_tolerance: str = "medium"
+    typical_questions: list[str] = Field(default_factory=list)
+
+
+class InterpersonalDTO(BaseModel):
+    authority_mode: str = ""
+    triggers: list[str] = Field(default_factory=list)
+    emotion_states: list[str] = Field(default_factory=list)
+
+
+class EvidenceDTO(BaseModel):
+    claim: str
+    citations: list[str]
+    confidence: float
+    source_material_id: str
+    layer: str
+
+
+class PersonaV2DTO(BaseModel):
+    """Full v2 5-layer persona output for GET /personas/{id}/v2 (Story 2.7)."""
+
+    id: str
+    name: str
+    role: str
+    avatar_color: Optional[str] = None
+    schema_version: int
+    hard_rules: list[HardRuleDTO] = Field(default_factory=list)
+    identity: Optional[IdentityDTO] = None
+    expression: Optional[ExpressionDTO] = None
+    decision: Optional[DecisionDTO] = None
+    interpersonal: Optional[InterpersonalDTO] = None
+    evidence: list[EvidenceDTO] = Field(default_factory=list)
+    rejected_features: dict[str, list[int]] = Field(default_factory=dict)
+    source_materials: list[str] = Field(default_factory=list)
+
+
+class PersonaPatchV2DTO(BaseModel):
+    """Partial update payload for PATCH /personas/{id}/v2 (Story 2.7).
+
+    Fields omitted (= None) are kept as-is on the server side.
+    evidence_citations are intentionally not editable (preserve traceability).
+    """
+
+    name: Optional[str] = None
+    role: Optional[str] = None
+    avatar_color: Optional[str] = None
+    hard_rules: Optional[list[HardRuleDTO]] = None
+    identity: Optional[IdentityDTO] = None
+    expression: Optional[ExpressionDTO] = None
+    decision: Optional[DecisionDTO] = None
+    interpersonal: Optional[InterpersonalDTO] = None
+    rejected_features: Optional[dict[str, list[int]]] = None
