@@ -1,5 +1,5 @@
-# input: 领域实体 ChatRoom, Message, Scenario, AnalysisReport, CoachingSession, CoachingMessage, Organization, Team, PersonaRelationship, CompetencyEvaluation
-# output: ChatRoomRepository, MessageRepository, ScenarioRepository, AnalysisReportRepository, CoachingSessionRepository, CoachingMessageRepository, OrganizationRepository, TeamRepository, PersonaRelationshipRepository, CompetencyEvaluationRepository ABC 仓储接口
+# input: 领域实体 ChatRoom, Message, Scenario, AnalysisReport, CoachingSession, CoachingMessage, Organization, Team, PersonaRelationship, CompetencyEvaluation, Persona, Evidence
+# output: ChatRoomRepository, MessageRepository, ScenarioRepository, AnalysisReportRepository, CoachingSessionRepository, CoachingMessageRepository, OrganizationRepository, TeamRepository, PersonaRelationshipRepository, CompetencyEvaluationRepository, StakeholderPersonaRepository ABC 仓储接口
 # owner: wanhua.gu
 # pos: 领域层 - 利益相关者聊天仓储接口定义；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """Repository abstractions for stakeholder chat aggregate."""
@@ -13,6 +13,7 @@ from typing import Optional
 from .competency_entity import CompetencyEvaluation
 from .entity import AnalysisReport, ChatRoom, CoachingMessage, CoachingSession, Message
 from .organization_entity import Organization, PersonaRelationship, Team
+from .persona_entity import Evidence, Persona
 from .scenario_entity import Scenario
 
 
@@ -187,3 +188,40 @@ class CompetencyEvaluationRepository(ABC):
 
     @abstractmethod
     async def list_all(self, *, skip: int = 0, limit: int = 500) -> list[CompetencyEvaluation]: ...
+
+
+class StakeholderPersonaRepository(ABC):
+    """Contract for persisting and querying structured (5-layer) personas.
+
+    Story 2.2: v2 结构化 persona 的 DB 持久化；v1 markdown persona 仍由
+    PersonaLoader 从磁盘加载，不经此仓储。
+    """
+
+    @abstractmethod
+    async def save_structured_persona(self, persona: Persona) -> Persona:
+        """Upsert a structured persona (schema_version=2 expected).
+
+        - 若 id 不存在则 INSERT；存在则 UPDATE
+        - 证据链 (evidence_citations) 同时持久化
+        """
+        ...
+
+    @abstractmethod
+    async def get_by_id(self, persona_id: str) -> Optional[Persona]: ...
+
+    @abstractmethod
+    async def get_with_evidence(
+        self, persona_id: str
+    ) -> Optional[tuple[Persona, list[Evidence]]]:
+        """Return persona + its evidence citations.
+
+        Returns None if persona not found.
+        """
+        ...
+
+    @abstractmethod
+    async def list_all(
+        self, *, schema_version: Optional[int] = None
+    ) -> list[Persona]:
+        """List personas, optionally filtered by schema_version."""
+        ...
