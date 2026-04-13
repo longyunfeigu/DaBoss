@@ -16,7 +16,12 @@
 | `analysis_service.py` | AnalysisService — LLM 智能对话分析报告生成（阻力排名 + 有效论点 + 沟通建议） |
 | `compression_service.py` | CompressionService — 后台对话历史语义压缩（异步增量摘要，不阻塞聊天） |
 | `persona_migrator.py` | Story 2.3 — markdown v1 → 5-layer v2 迁移（pure functions + async run_migration），供 `scripts/migrate_personas_to_v2.py` 调用 |
-| `prompts/` | 应用层 LLM 提示词资源（如 `persona_v1_to_v2.md`） |
+| `persona_builder_service.py` | Story 2.4 — PersonaBuilderService：agent→parse→adversarialize→persist 流式编排，yield BuildEvent 序列（AC1-AC8） |
+| `build_events.py` | Story 2.4 — BuildEvent dataclass + 6 canonical event types + heartbeat/error |
+| `adversarializer.py` | Story 2.4 — persona 对抗化 pure functions (apply_hostile/mark_hostile_fallback) + LLM 调用 |
+| `persona_build_cache.py` | Story 2.4 — Redis 幂等缓存（TTL=15min, order-insensitive key, no-op fallback） |
+| `exceptions.py` | Story 2.4 — BuildError / BuildTimeoutError（应用层编排异常） |
+| `prompts/` | 应用层 LLM 提示词资源：`persona_v1_to_v2.md`（Story 2.3 迁移）、`persona_markdown_to_json.md`（Story 2.4 agent 输出解析）、`adversarialize.md`（Story 2.4 对抗化，含 4 规则段） |
 
 ## 依赖关系
 
