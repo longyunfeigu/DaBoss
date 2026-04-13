@@ -1,0 +1,117 @@
+/* input: 无；output: PersonaBuildProgress 视觉 — Variant B pill 化 + 状态着色 */
+
+.progress-pane-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 4px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.progress-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  padding: 40px 24px;
+  color: var(--text-muted);
+}
+
+.progress-empty-emoji {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.progress-empty h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.progress-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+
+/* Event pill — Variant B */
+.progress-event {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.progress-event .event-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--bg-base);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.progress-event.done {
+  background: var(--success-bg);
+  color: var(--text-primary);
+}
+.progress-event.done .event-icon {
+  background: var(--success);
+  color: white;
+}
+
+.progress-event.in-progress {
+  background: var(--green-soft);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.progress-event.in-progress .event-icon {
+  background: var(--green);
+  color: white;
+}
+
+.progress-event.failed {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+.progress-event.failed .event-icon {
+  background: var(--rose);
+  color: white;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--rose-soft);
+  color: var(--rose);
+  font-size: 13px;
+  margin-top: 8px;
+}
