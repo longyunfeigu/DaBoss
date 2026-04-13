@@ -5,6 +5,8 @@ import ChatPage from './pages/ChatPage'
 import BattlePrepPage from './pages/BattlePrepPage'
 import GrowthPage from './pages/GrowthPage'
 import SettingsPage from './pages/SettingsPage'
+import PersonaBuilderPage from './pages/PersonaBuilderPage'
+import PersonaPlaceholderPage from './pages/PersonaPlaceholderPage'
 import { AppProvider } from './contexts/AppContext'
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
           <Route path="battle-prep" element={<BattlePrepPage />} />
           <Route path="growth" element={<GrowthPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="persona/new" element={<PersonaBuilderPage />} />
+          <Route path="persona/:id/edit" element={<PersonaPlaceholderPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

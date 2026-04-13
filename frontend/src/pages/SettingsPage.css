@@ -530,3 +530,30 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
 }
+
+/* === Story 2.6: persona builder entry button === */
+.settings-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.persona-build-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--primary-gradient);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+.persona-build-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}

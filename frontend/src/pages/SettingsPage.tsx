@@ -7,7 +7,9 @@ import {
   Layers,
   Building2,
   Volume2,
+  Sparkles,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAppContext } from '../contexts/AppContext'
 import Avatar from '../components/Avatar'
 import {
@@ -76,6 +78,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 // ---------------------------------------------------------------------------
 
 function PersonasTab() {
+  const navigate = useNavigate()
   const { personaMap, currentOrg, reloadPersonas } = useAppContext()
   const personas = Object.values(personaMap)
   const dialog = useConfirmDialog()
@@ -208,10 +211,20 @@ function PersonasTab() {
     <>
       <div className="settings-section-header">
         <h3 className="settings-section-title">角色管理</h3>
-        <button className="settings-create-btn" onClick={startCreate}>
-          <Plus size={14} />
-          创建新角色
-        </button>
+        <div className="settings-header-actions">
+          <button
+            className="persona-build-btn"
+            onClick={() => navigate('/persona/new')}
+            title="粘贴素材让 AI 生成对手画像"
+          >
+            <Sparkles size={14} />
+            从素材生成对手
+          </button>
+          <button className="settings-create-btn" onClick={startCreate}>
+            <Plus size={14} />
+            创建新角色
+          </button>
+        </div>
       </div>
 
       <div className="settings-list">
