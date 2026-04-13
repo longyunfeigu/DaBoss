@@ -655,3 +655,32 @@ export async function generateProfileCard(): Promise<ProfileCard> {
   const json: ApiResponse<ProfileCard> = await resp.json()
   return json.data
 }
+
+// ---------------------------------------------------------------------------
+// Story 2.5 / 2.6 — Persona Build SSE
+// ---------------------------------------------------------------------------
+
+export type BuildEventType =
+  | 'workspace_ready'
+  | 'agent_tool_use'
+  | 'agent_message'
+  | 'parse_done'
+  | 'adversarialize_start'
+  | 'adversarialize_done'
+  | 'persist_done'
+  | 'heartbeat'
+  | 'error'
+
+export interface BuildEvent {
+  seq: number
+  type: BuildEventType
+  ts: number
+  data: Record<string, unknown>
+}
+
+export interface PersonaBuildRequest {
+  materials: string[]
+  target_persona_id?: string
+  name?: string
+  role?: string
+}
