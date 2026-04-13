@@ -9,6 +9,7 @@ from .conversation import (
     AgentConfigModel,
 )
 from .stakeholder import ChatRoomModel, StakeholderMessageModel
+from .stakeholder_persona import StakeholderPersonaModel
 from .scenario import ScenarioModel
 from .organization import OrganizationModel, TeamModel, PersonaRelationshipModel
 from .competency import CompetencyEvaluationModel
@@ -25,6 +26,7 @@ __all__ = [
     "TimestampMixin",
     "ChatRoomModel",
     "StakeholderMessageModel",
+    "StakeholderPersonaModel",
     "ScenarioModel",
     "OrganizationModel",
     "TeamModel",
