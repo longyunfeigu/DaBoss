@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DaBoss · Epic 2 Persona Editor — 4 Variants Comparison</title>
+<style>
+  :root {
+    --bg:#F4F9F6; --bg-card:#FFFFFF;
+    --border:#DAE8E0; --text:#1A2E22; --muted:#4A6B56; --faint:#7A9A88;
+    --green:#2D9C6F; --green-soft:rgba(45,156,111,0.10);
+    --shadow-sm: 0 1px 3px rgba(26,46,34,0.08);
+    --shadow-md: 0 8px 24px rgba(26,46,34,0.10);
+    --sans: -apple-system, "Inter", "PingFang SC", system-ui, sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 28px 40px; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.6; }
+
+  header { max-width:1400px; margin:0 auto 20px; }
+  header h1 { margin:0 0 6px; font-size:24px; font-weight:700; }
+  header p { margin:0 0 4px; color:var(--muted); }
+  header code { font-family:ui-monospace, "JetBrains Mono", Menlo, monospace; font-size:12px; background:white; padding:1px 6px; border-radius:4px; border:1px solid var(--border); }
+  header .hint { color:var(--faint); font-size:13px; margin-top:8px; }
+
+  .controls { max-width:1400px; margin:0 auto 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .ctrl-label { font-size:12px; color:var(--muted); margin-right:4px; }
+  .ctrl-btn { background:white; border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; color:var(--text); }
+  .ctrl-btn:hover { border-color:var(--green); color:var(--green); }
+  .ctrl-btn.active { background:var(--green); color:white; border-color:var(--green); }
+
+  .grid { max-width:1400px; margin:0 auto; display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+
+  .card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; transition:transform .15s, box-shadow .15s; }
+  .card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+
+  .card-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:12px; }
+  .card-head .badge { font-size:13px; font-weight:700; color:white; background:var(--green); padding:4px 10px; border-radius:9999px; flex-shrink:0; }
+  .card-head h3 { margin:0 0 2px; font-size:16px; font-weight:700; }
+  .card-head .sub { font-size:12px; color:var(--muted); }
+  .card-head .open { margin-left:auto; font-size:12px; color:var(--green); text-decoration:none; padding:6px 12px; border:1px solid var(--green); border-radius:8px; flex-shrink:0; }
+  .card-head .open:hover { background:var(--green); color:white; }
+
+  .frame-wrap { position:relative; overflow:hidden; height:520px; background:#F4F9F6; }
+  iframe { border:0; width:1440px; height:1040px; transform:scale(0.5); transform-origin:0 0; }
+
+  .card-foot { padding:12px 18px 16px; border-top:1px solid var(--border); }
+  .card-foot .who { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .card-foot ul { margin:0; padding-left:20px; font-size:12.5px; color:var(--text); }
+  .card-foot li { margin-bottom:2px; }
+  .card-foot .pros { color:#16A34A; }
+  .card-foot .cons { color:#C75B5B; }
+
+  /* mobile */
+  @media (max-width:980px) {
+    .grid { grid-template-columns:1fr; }
+    .frame-wrap { height:600px; }
+    iframe { transform:scale(0.45); }
+  }
+
+  footer { max-width:1400px; margin:32px auto 0; padding:20px; background:white; border:1px solid var(--border); border-radius:14px; color:var(--muted); font-size:13px; }
+  footer b { color:var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Persona Editor · 4 Variant Comparison</h1>
+  <p>Epic 2 / Story 2.7 — <code>/persona/:id/edit</code></p>
+  <p class="hint">每个卡片是缩小到 50% 的真实 HTML 页面预览。点 <code>Open full</code> 在新标签页里看真实尺寸 + 交互。看完告诉我 A/B/C/D，或者 "都不行，再来一组"。</p>
+</header>
+
+<div class="controls">
+  <span class="ctrl-label">缩放</span>
+  <button class="ctrl-btn active" onclick="setZoom(0.5)">50%</button>
+  <button class="ctrl-btn" onclick="setZoom(0.7)">70%</button>
+  <button class="ctrl-btn" onclick="setZoom(1)">100%</button>
+  <span style="flex:1"></span>
+  <span class="ctrl-label">提示：</span>
+  <span style="font-size:12px;color:var(--muted)">缩略图里如果看不清，建议直接 Open full</span>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="card-head">
+      <span class="badge" style="background:#525C5A">A</span>
+      <div>
+        <h3>Linear / Notion 工具风</h3>
+        <div class="sub">紧凑、键盘优先、零装饰、信息密度最高</div>
+      </div>
+      <a class="open" href="variant-a-linear.html" target="_blank">Open full ↗</a>
+    </div>
+    <div class="frame-wrap"><iframe src="variant-a-linear.html" loading="lazy"></iframe></div>
+    <div class="card-foot">
+      <div class="who">适合：每天用 30+ 次的重度用户、技术背景、偏好 IDE 风格</div>
+      <ul>
+        <li class="pros">+ 信息密度最高，浏览效率最快</li>
+        <li class="pros">+ 键盘快捷键明显，老用户友好</li>
+        <li class="cons">− 普通用户初见可能觉得"太冷淡"</li>
+        <li class="cons">− 没游戏感，难发朋友圈传播</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="badge" style="background:#2D9C6F">B</span>
+      <div>
+        <h3>DaBoss 原生游戏风</h3>
+        <div class="sub">大头像、彩色卡片、CTA 突出、与现有页面一致</div>
+      </div>
+      <a class="open" href="variant-b-daboss.html" target="_blank">Open full ↗</a>
+    </div>
+    <div class="frame-wrap"><iframe src="variant-b-daboss.html" loading="lazy"></iframe></div>
+    <div class="card-foot">
+      <div class="who">适合：DaBoss 现有用户、追求"打怪练习"心流的用户、社交分享场景</div>
+      <ul>
+        <li class="pros">+ 与现有 HomePage / GrowthPage 视觉完全一致</li>
+        <li class="pros">+ 对手画像有"角色卡"感，传播性强</li>
+        <li class="cons">− 信息密度低，27 条 trait 要滚很久</li>
+        <li class="cons">− emoji 重，国际化时文化差异风险</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="badge" style="background:#0A1410">C</span>
+      <div>
+        <h3>v0 / Perplexity AI 风</h3>
+        <div class="sub">深色左栏 + 流式光标 + 玻璃态浮 dock，像 AI 工具</div>
+      </div>
+      <a class="open" href="variant-c-ai.html" target="_blank">Open full ↗</a>
+    </div>
+    <div class="frame-wrap"><iframe src="variant-c-ai.html" loading="lazy"></iframe></div>
+    <div class="card-foot">
+      <div class="who">适合：科技尝鲜用户、追求"被 AI 服务"心智、付费意愿高的早期采用者</div>
+      <ul>
+        <li class="pros">+ "AI 实时生成感"最强，体感价值最高</li>
+        <li class="pros">+ Regenerate / Refine dock 自然支持迭代</li>
+        <li class="cons">− 与现有薄荷绿 + 纸感的整体不太一致，要么扩散到全站要么孤立</li>
+        <li class="cons">− 普通职场用户可能觉得"太极客"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="badge" style="background:#9C4747">D</span>
+      <div>
+        <h3>Obsidian 学术风</h3>
+        <div class="sub">双栏 + 脚注 + 引用区永久可见，证据是主角</div>
+      </div>
+      <a class="open" href="variant-d-obsidian.html" target="_blank">Open full ↗</a>
+    </div>
+    <div class="frame-wrap"><iframe src="variant-d-obsidian.html" loading="lazy"></iframe></div>
+    <div class="card-foot">
+      <div class="who">适合：高知用户、咨询/律师/HR 等"靠证据说话"的职业、严肃场景</div>
+      <ul>
+        <li class="pros">+ 证据链作为主角，最能建立"AI 没胡编"的信任</li>
+        <li class="pros">+ 矛盾/反例自然展示（contradiction footnote），是其他三版做不到的</li>
+        <li class="cons">− 双栏布局移动端体验差，要重做</li>
+        <li class="cons">− serif 字体和现有 sans 系统不一致，全站风险大</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><b>选定后下一步：</b>告诉我选哪一个，我会：</p>
+  <ol style="margin:6px 0;padding-left:24px;">
+    <li>把这个变体的设计要点提炼成 <code>docs/designs/epic-2-persona-builder/DESIGN.md</code>，作为 Story 2.7 的设计基线</li>
+    <li>把 Epic 2 的 Story 2.7 验收标准对照所选方案微调</li>
+    <li>问你是不是现在路由到 <code>run-story</code> 开始 Story 2.1 实现</li>
+  </ol>
+  <p style="margin-top:10px;color:var(--faint);font-size:12px;">如果都不满意：告诉我哪个方向最接近你想要的、缺什么。我可以在选中的基础上做第 5 个混搭（譬如 "B 的卡片 + D 的证据链区"）。</p>
+</footer>
+
+<script>
+  function setZoom(z) {
+    document.querySelectorAll('iframe').forEach(f => {
+      f.style.transform = 'scale(' + z + ')';
+      f.parentElement.style.height = (1040 * z) + 'px';
+    });
+    document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

@@ -6,7 +6,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
+from pathlib import Path
+
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -101,6 +103,34 @@ class LLMSettings(BaseModel):
     max_tokens: int = 4096
     timeout: int = 60
     max_retries: int = 2
+
+
+class AgentSDKSettings(BaseModel):
+    """Claude Agent SDK 配置（Epic 2 / Story 2.1）。
+
+    用于在 FastAPI 进程内嵌入 sub-agent 加载本地 skill 完成多轮 tool-use 任务。
+    """
+
+    # API 凭据 (SecretStr 防 repr 泄漏；从 STAKEHOLDER__ANTHROPIC_API_KEY 复用)
+    anthropic_api_key: Optional[SecretStr] = None
+    anthropic_base_url: Optional[str] = None  # 内网中继 URL，e.g. http://10.0.3.248:3000/api
+
+    # Workspace 隔离根目录 (每用户/会话独立子目录)
+    workspace_root: Path = Path("/tmp/daboss/workspaces")  # nosec B108
+
+    # Sub-agent 超时 / 清理 / 并发
+    agent_timeout_s: int = 180
+    cleanup_delay_s: int = 300  # 任务结束后多久清理 workspace
+    max_concurrent_builds: int = 5  # 进程内 semaphore 限流
+
+    # Fork 的 colleague-skill 源目录 (会被复制到每个 workspace 的 .claude/skills/)
+    # 相对路径以 backend/ 为基准（应用启动 cwd），生产部署可用 env 覆盖为绝对路径
+    skill_source_dir: Path = Path(".claude/skills/colleague-skill")
+
+    # 允许 sub-agent 使用的工具白名单 (禁 Bash 防 sub-agent 执行任意命令)
+    allowed_tools: list[str] = Field(
+        default_factory=lambda: ["Skill", "Read", "Write", "Grep", "Glob"]
+    )
 
 
 class StorageSettings(BaseModel):
@@ -222,6 +252,7 @@ class Settings(BaseSettings):
     )
 
     llm: LLMSettings = Field(default_factory=LLMSettings)
+    agent_sdk: AgentSDKSettings = Field(default_factory=AgentSDKSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     metrics: MetricsSettings = Field(default_factory=MetricsSettings)
     tracing: TracingSettings = Field(default_factory=TracingSettings)

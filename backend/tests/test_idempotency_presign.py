@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from api.dependencies import get_file_asset_service, get_idempotency_service
 from api.routes.storage import router as storage_router
@@ -128,7 +128,7 @@ async def test_presign_upload_idempotent_replay() -> None:
     }
     headers = {"Idempotency-Key": "aaaaaaaa"}
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r1 = await client.post("/api/v1/storage/presign-upload", json=payload, headers=headers)
         r2 = await client.post("/api/v1/storage/presign-upload", json=payload, headers=headers)
 
@@ -162,7 +162,7 @@ async def test_presign_upload_idempotency_key_reused_with_different_payload() ->
     }
     headers = {"Idempotency-Key": "bbbbbbbb"}
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r1 = await client.post("/api/v1/storage/presign-upload", json=payload1, headers=headers)
         r2 = await client.post("/api/v1/storage/presign-upload", json=payload2, headers=headers)
 

@@ -213,3 +213,62 @@ async def get_chat_service(
     llm: LLMPort = Depends(get_llm_port),
 ) -> ChatApplicationService:
     return ChatApplicationService(uow_factory=SQLAlchemyUnitOfWork, llm=llm)
+
+
+# ---------------------------------------------------------------------------
+# Persona Builder dependencies (Story 2.4 / 2.5)
+# ---------------------------------------------------------------------------
+
+
+class _UoWBoundStakeholderPersonaRepo:
+    """Adapter that gives PersonaBuilderService a save method that creates
+    its own UoW per call (the build runs across many seconds, so binding to
+    a single request-scoped session would be unsafe)."""
+
+    def __init__(self, uow_factory):
+        self._uow_factory = uow_factory
+
+    async def save_structured_persona(self, persona):
+        async with self._uow_factory() as uow:
+            await uow.stakeholder_persona_repository.save_structured_persona(persona)
+            await uow.commit()
+
+
+def _load_stakeholder_prompt(name: str) -> str:
+    """Load a prompt markdown file from application/services/stakeholder/prompts/."""
+    from importlib.resources import files
+
+    return (
+        files("application.services.stakeholder.prompts").joinpath(name).read_text(encoding="utf-8")
+    )
+
+
+async def get_persona_builder_service(
+    llm: LLMPort = Depends(get_stakeholder_llm_port),
+):
+    """Construct a PersonaBuilderService for one request (Story 2.5).
+
+    Uses the singleton AgentSkillClient + Anthropic LLM; persistence is via
+    a UoW-bound adapter so the builder can save without holding the request
+    session open across the entire build.
+    """
+    from application.services.stakeholder.persona_build_cache import PersonaBuildCache
+    from application.services.stakeholder.persona_builder_service import (
+        PersonaBuilderService,
+    )
+    from infrastructure.external.agent_sdk.lifespan import get_agent_sdk_client
+    from infrastructure.external.cache.redis_client import (
+        _redis_client as _shared_redis,
+    )
+
+    agent_client = get_agent_sdk_client()
+    repo = _UoWBoundStakeholderPersonaRepo(SQLAlchemyUnitOfWork)
+    cache = PersonaBuildCache(redis=_shared_redis)
+    return PersonaBuilderService(
+        agent_client=agent_client,
+        llm=llm,
+        repo=repo,
+        cache=cache,
+        adversarialize_prompt=_load_stakeholder_prompt("adversarialize.md"),
+        parse_prompt=_load_stakeholder_prompt("persona_markdown_to_json.md"),
+    )

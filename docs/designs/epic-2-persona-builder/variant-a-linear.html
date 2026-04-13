@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Variant A · Linear 工具风 — Persona Editor</title>
+<style>
+  :root {
+    --green:#2D9C6F; --green-soft:rgba(45,156,111,0.08);
+    --amber:#C8944A; --amber-soft:rgba(200,148,74,0.10);
+    --bg:#FFFFFF; --bg-row:#FAFAFA; --bg-hover:#F4F6F5;
+    --border:#E4E7E5; --border-strong:#D5DAD7;
+    --text:#1A2E22; --muted:#6B7E73; --faint:#9AA8A0;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+    --sans: -apple-system, "Inter", system-ui, "PingFang SC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:13px; line-height:1.45; -webkit-font-smoothing:antialiased; }
+  .app { display:grid; grid-template-columns: 1fr 320px; min-height:100vh; }
+
+  /* top bar */
+  .topbar { grid-column: 1 / -1; display:flex; align-items:center; gap:12px; height:48px; padding:0 20px; border-bottom:1px solid var(--border); background:var(--bg); }
+  .crumb { font-size:13px; color:var(--muted); }
+  .crumb b { color:var(--text); font-weight:600; margin-left:6px; }
+  .avatar { width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#2D9C6F,#5B8C5A); display:inline-flex; align-items:center; justify-content:center; color:white; font-size:11px; font-weight:600; }
+  .badge-mono { font-family:var(--mono); font-size:11px; padding:2px 6px; border:1px solid var(--border-strong); border-radius:4px; color:var(--muted); background:var(--bg-row); }
+  .spacer { flex:1; }
+  .kbd { font-family:var(--mono); font-size:11px; color:var(--muted); padding:2px 6px; border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; background:white; }
+  .kbd .sep { color:var(--faint); margin:0 2px; }
+
+  /* main editor */
+  .main { padding: 16px 20px 80px; max-width: 760px; }
+  .section { border-top:1px solid var(--border); }
+  .section:first-child { border-top:none; }
+  .sec-head { display:flex; align-items:center; gap:8px; height:32px; padding:0 4px; cursor:pointer; }
+  .sec-head:hover { background:var(--bg-hover); }
+  .chev { width:10px; color:var(--muted); }
+  .sec-name { font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text); }
+  .sec-count { font-size:11px; color:var(--faint); font-weight:500; }
+
+  .row { display:flex; align-items:center; gap:10px; height:36px; padding:0 4px 0 20px; border-left:2px solid transparent; position:relative; cursor:default; }
+  .row:hover { background:var(--bg-hover); }
+  .row .actions { display:none; gap:4px; }
+  .row:hover .actions { display:flex; }
+  .row.warn { border-left-color: var(--amber); background:var(--amber-soft); }
+  .row.warn:hover { background:var(--amber-soft); }
+  .row .text { flex:1; color:var(--text); font-size:13px; }
+  .row .chip-warn { font-family:var(--mono); font-size:10px; padding:1px 6px; border:1px solid var(--amber); color:var(--amber); border-radius:3px; }
+  .icon-btn { width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; border:1px solid transparent; border-radius:4px; color:var(--muted); cursor:pointer; }
+  .icon-btn:hover { border-color:var(--border-strong); background:white; color:var(--text); }
+  .icon-btn svg { width:12px; height:12px; }
+
+  /* drawer */
+  .drawer { border-left:1px solid var(--border); background:white; padding:20px 16px; position:sticky; top:0; height:100vh; overflow:auto; }
+  .drawer-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:10px; }
+  .drawer-claim { font-size:13px; font-weight:600; margin-bottom:14px; color:var(--text); line-height:1.4; }
+  .conf-bar { height:4px; background:var(--bg-row); border-radius:2px; overflow:hidden; margin-bottom:6px; }
+  .conf-fill { height:100%; background:var(--green); width:82%; }
+  .conf-label { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:18px; display:flex; justify-content:space-between; }
+
+  .cite { padding:10px 0; border-top:1px solid var(--border); }
+  .cite-meta { display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10px; color:var(--faint); margin-bottom:6px; }
+  .cite-tag { padding:1px 5px; background:var(--bg-row); border:1px solid var(--border); border-radius:3px; }
+  .cite-quote { font-size:12px; color:var(--text); padding:8px 10px; background:var(--bg-row); border-radius:4px; line-height:1.5; }
+
+  /* footer */
+  .footer { position:fixed; bottom:0; left:0; right:320px; height:48px; padding:0 20px; background:white; border-top:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+  .footer .hint { font-size:12px; color:var(--muted); }
+  .footer .spacer { flex:1; }
+  .btn-text { background:transparent; border:none; padding:6px 10px; font-size:13px; color:var(--text); cursor:pointer; border-radius:4px; }
+  .btn-text:hover { background:var(--bg-hover); }
+  .btn-primary { background:var(--green); color:white; border:none; padding:6px 12px; font-size:13px; font-weight:500; border-radius:4px; cursor:pointer; }
+  .btn-primary:hover { background:#258A60; }
+
+  /* lucide-style stub icons via inline SVG */
+  .i-search { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <span class="crumb">Personas <span style="color:var(--faint);margin:0 4px">/</span><b>张伟</b></span>
+    <span class="avatar">张</span>
+    <span class="badge-mono">v2</span>
+    <span class="badge-mono" style="color:var(--green);border-color:var(--green)">structured</span>
+    <span class="spacer"></span>
+    <span class="kbd">⌘<span class="sep">+</span>S</span>
+  </div>
+
+  <div class="main">
+    <!-- Section 1 -->
+    <div class="section">
+      <div class="sec-head">
+        <svg class="chev" viewBox="0 0 24 24"><path class="i-search" d="M6 9l6 6 6-6"/></svg>
+        <span class="sec-name">Hard Rules</span>
+        <span class="sec-count">(3)</span>
+      </div>
+      <div class="row">
+        <span class="text">绝不在会议上公开承诺预算</span>
+        <div class="actions">
+          <span class="icon-btn" title="查证据"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn" title="标记不对"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">不接受口头确认，必须邮件留痕</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">紧急方案默认拖到周四对齐会再决</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2 -->
+    <div class="section">
+      <div class="sec-head">
+        <svg class="chev" viewBox="0 0 24 24"><path class="i-search" d="M6 9l6 6 6-6"/></svg>
+        <span class="sec-name">Identity</span>
+        <span class="sec-count">(4)</span>
+      </div>
+      <div class="row">
+        <span class="text">技术出身，空降任职 6 个月</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row warn">
+        <span class="text">Q4 KPI 压力大，董事会关注增长</span>
+        <span class="chip-warn">low confidence</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">毕业于美国 top-30 工程院校</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3 -->
+    <div class="section">
+      <div class="sec-head">
+        <svg class="chev" viewBox="0 0 24 24"><path class="i-search" d="M6 9l6 6 6-6"/></svg>
+        <span class="sec-name">Expression</span>
+        <span class="sec-count">(6)</span>
+      </div>
+      <div class="row">
+        <span class="text">口头禅：「这事儿先不急」</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">用「但是」开启反驳，频率 3.2/对话</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4 -->
+    <div class="section">
+      <div class="sec-head">
+        <svg class="chev" viewBox="0 0 24 24"><path class="i-search" d="M6 9l6 6 6-6"/></svg>
+        <span class="sec-name">Decision</span>
+        <span class="sec-count">(5)</span>
+      </div>
+      <div class="row" style="background:var(--green-soft);border-left:2px solid var(--green);">
+        <span class="text" style="font-weight:500">默认看数据，但涉及自身考核时变情绪化</span>
+        <div class="actions" style="display:flex">
+          <span class="icon-btn" style="border-color:var(--border-strong);background:white"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">决策前追问 3 次根因，常用反问句式</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5 -->
+    <div class="section">
+      <div class="sec-head">
+        <svg class="chev" viewBox="0 0 24 24"><path class="i-search" d="M6 9l6 6 6-6"/></svg>
+        <span class="sec-name">Interpersonal</span>
+        <span class="sec-count">(4)</span>
+      </div>
+      <div class="row">
+        <span class="text">对上：迅速迎合、不唱反调</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="text">对下：严厉施压、常用沉默测试</span>
+        <div class="actions">
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><circle class="i-search" cx="11" cy="11" r="7"/><path class="i-search" d="M21 21l-4-4"/></svg></span>
+          <span class="icon-btn"><svg viewBox="0 0 24 24"><path class="i-search" d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- evidence drawer (pinned right) -->
+  <aside class="drawer">
+    <div class="drawer-head">Evidence · Decision</div>
+    <div class="drawer-claim">默认看数据，但涉及自身考核时变情绪化</div>
+    <div class="conf-bar"><div class="conf-fill"></div></div>
+    <div class="conf-label"><span>confidence</span><span>0.82</span></div>
+
+    <div class="cite">
+      <div class="cite-meta">
+        <span>2025-09-12 14:23</span>
+        <span class="cite-tag">chat</span>
+        <span class="cite-tag">内部群组</span>
+      </div>
+      <div class="cite-quote">"Q3 ROI 数据是我能接受方案的唯一前提，别给我画饼。"</div>
+    </div>
+    <div class="cite">
+      <div class="cite-meta">
+        <span>2025-09-18 10:07</span>
+        <span class="cite-tag">email</span>
+      </div>
+      <div class="cite-quote">"我需要看到过去 3 个 quarter 的留存趋势再决定。"</div>
+    </div>
+    <div class="cite">
+      <div class="cite-meta">
+        <span>2025-10-05 16:40</span>
+        <span class="cite-tag">meeting-notes</span>
+      </div>
+      <div class="cite-quote">"讨论前先把数据表发给我，没有数据的会我不开。"</div>
+    </div>
+  </aside>
+
+  <div class="footer">
+    <span class="hint"><span class="kbd">⌘<span class="sep">+</span>↵</span>&nbsp; Start practice</span>
+    <span class="spacer"></span>
+    <button class="btn-text">Save</button>
+    <button class="btn-primary">Start Practice →</button>
+  </div>
+
+</div>
+</body>
+</html>

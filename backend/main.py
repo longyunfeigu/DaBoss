@@ -25,6 +25,10 @@ from core.logging_config import configure_logging, get_logger
 from core.observability import tracing as tracing_obs
 from core.response import success_response
 from infrastructure.database import create_tables, upgrade_schema_to_head
+from infrastructure.external.agent_sdk.lifespan import (
+    init_agent_sdk_client,
+    shutdown_agent_sdk_client,
+)
 from infrastructure.external.cache import init_redis_client, shutdown_redis_client
 from infrastructure.external.llm import (
     init_llm_client,
@@ -117,6 +121,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error("anthropic_init_failed", error=str(exc))
 
+    # 初始化 Claude Agent SDK 客户端（Epic 2 / Persona Builder）
+    try:
+        await init_agent_sdk_client()
+    except Exception as exc:
+        logger.error("agent_sdk_init_failed", error=str(exc))
+
     # 初始化语音客户端（TTS / STT）
     try:
         await init_tts_client()
@@ -134,6 +144,8 @@ async def lifespan(app: FastAPI):
     logger.info("voice_shutdown", message="Voice clients (TTS/STT) shutdown")
     await shutdown_anthropic_client()
     logger.info("anthropic_shutdown", message="Anthropic client shutdown")
+    await shutdown_agent_sdk_client()
+    logger.info("agent_sdk_shutdown", message="Agent SDK client shutdown")
     await shutdown_llm_client()
     logger.info("llm_shutdown", message="LLM client shutdown")
     if settings.redis.url:

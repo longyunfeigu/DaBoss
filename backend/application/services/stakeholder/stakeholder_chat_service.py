@@ -337,8 +337,12 @@ class StakeholderChatService:
                                 if sentence:
                                     task = asyncio.create_task(
                                         self._synthesize_and_push(
-                                            room_id, persona_id, persona,
-                                            sentence, audio_index, tts_reply_id,
+                                            room_id,
+                                            persona_id,
+                                            persona,
+                                            sentence,
+                                            audio_index,
+                                            tts_reply_id,
                                         )
                                     )
                                     tts_tasks.append(task)
@@ -350,8 +354,12 @@ class StakeholderChatService:
                         if remaining:
                             task = asyncio.create_task(
                                 self._synthesize_and_push(
-                                    room_id, persona_id, persona,
-                                    remaining, audio_index, tts_reply_id,
+                                    room_id,
+                                    persona_id,
+                                    persona,
+                                    remaining,
+                                    audio_index,
+                                    tts_reply_id,
                                 )
                             )
                             tts_tasks.append(task)

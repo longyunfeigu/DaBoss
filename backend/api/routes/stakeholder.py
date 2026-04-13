@@ -1,13 +1,15 @@
-# input: PersonaLoader, PersonaEditorService, ChatRoomApplicationService, StakeholderChatService, ScenarioApplicationService, AnalysisService, GrowthService (via dependencies)
-# output: stakeholder API 路由 (personas CRUD + rooms + messages + scenarios CRUD + analysis reports + growth dashboard)
+# input: PersonaLoader, PersonaEditorService, ChatRoomApplicationService, StakeholderChatService, ScenarioApplicationService, AnalysisService, GrowthService, PersonaBuilderService (via dependencies)
+# output: stakeholder API 路由 (personas CRUD + rooms + messages + scenarios CRUD + analysis reports + growth dashboard + Story 2.5 SSE persona/build)
 # owner: wanhua.gu
-# pos: 表示层 - 利益相关者聊天 API 路由（角色 + 聊天室 + 消息 + 场景）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
+# pos: 表示层 - 利益相关者聊天 API 路由（角色 + 聊天室 + 消息 + 场景 + persona 构建 SSE）；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """Stakeholder chat API routes."""
 
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import timezone
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -28,6 +30,7 @@ from api.dependencies import (
     get_coaching_service,
     get_growth_service,
     get_organization_service,
+    get_persona_builder_service,
     get_persona_editor_service,
     get_persona_loader,
     get_scenario_service,
@@ -42,6 +45,7 @@ from application.services.stakeholder.dto import (
     CreateRelationshipDTO,
     CreateScenarioDTO,
     CreateTeamDTO,
+    PersonaBuildRequestDTO,
     SendMessageDTO,
     StartBattleDTO,
     UpdateOrganizationDTO,
@@ -1017,3 +1021,153 @@ async def generate_profile_card(
     if result is None:
         raise HTTPException(status_code=502, detail="名片生成失败，请重试")
     return success_response(data=result.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# Persona Builder SSE endpoint (Story 2.5)
+# ---------------------------------------------------------------------------
+
+# AC6: char-count approximation of token budget. ~2 chars per token avg
+# (CJK-heavy traffic) → 200k tokens ≈ 400k chars.
+_PERSONA_BUILD_CHAR_LIMIT = 400_000
+_PERSONA_BUILD_HEARTBEAT_S = 30.0
+
+
+def _persona_build_sse_payload(
+    *, seq: int, type_: str, ts: float, data: dict
+) -> str:
+    """Serialize one BuildEvent envelope as SSE (per AC3)."""
+    import json
+
+    body = {"seq": seq, "type": type_, "ts": ts, "data": data}
+    return f"data: {json.dumps(body, ensure_ascii=False)}\n\n"
+
+
+@router.post("/persona/build", summary="从素材构建画像 (Story 2.5 SSE)")
+async def build_persona_stream(
+    body: PersonaBuildRequestDTO,
+    svc=Depends(get_persona_builder_service),
+):
+    """SSE: 流式返回 PersonaBuilderService.build() 事件。
+
+    AC2 事件类型：workspace_ready | agent_tool_use | agent_message |
+    parse_done | adversarialize_start | adversarialize_done |
+    persist_done | heartbeat | error
+    AC3 envelope: {seq, type, ts, data}, seq monotonic from 1
+    AC4 heartbeat 每 30s
+    AC6 materials > 400k chars → 413 + MATERIAL_TOO_LARGE
+    AC7 materials 为空 → 400 + MATERIAL_EMPTY
+    AC9 客户端断开后 producer 仍跑完并落库
+    """
+    # AC7: empty materials check (DTO 强制 ≥1 个，但 element 可能是空字符串)
+    cleaned = [m for m in body.materials if m and m.strip()]
+    if not cleaned:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "MATERIAL_EMPTY", "message": "materials must not be empty"},
+        )
+
+    # AC6: char-count token approximation
+    total_chars = sum(len(m) for m in cleaned)
+    if total_chars > _PERSONA_BUILD_CHAR_LIMIT:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "code": "MATERIAL_TOO_LARGE",
+                "message": (
+                    f"materials too large: {total_chars} chars "
+                    f"(limit ≈ {_PERSONA_BUILD_CHAR_LIMIT} chars / 200k tokens)"
+                ),
+            },
+        )
+
+    # 临时使用匿名 user_id（项目尚无 get_current_user 认证依赖）
+    user_id = "anonymous"
+
+    # Decoupled producer/consumer so client disconnect does NOT abort the
+    # underlying build (AC9). Producer runs in its own task and pushes to a
+    # queue; the SSE generator is a pure consumer.
+    queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
+    sentinel_done = ("__done__", None)
+
+    async def _producer() -> None:
+        try:
+            async for ev in svc.build(
+                user_id=user_id,
+                materials=cleaned,
+                name=body.name,
+                role=body.role,
+                target_persona_id=body.target_persona_id,
+            ):
+                await queue.put(("event", ev))
+        except Exception as exc:  # noqa: BLE001 — relayed to client as error event
+            # PersonaBuilderService already emits its own error event before
+            # raising. We push a fallback error in case it didn't.
+            await queue.put(
+                (
+                    "fallback_error",
+                    {
+                        "error_code": getattr(exc, "error_code", "BUILD_FAILED"),
+                        "message": f"{type(exc).__name__}: {exc}",
+                    },
+                )
+            )
+        finally:
+            await queue.put(sentinel_done)
+
+    producer_task = asyncio.create_task(_producer())
+
+    async def event_stream():
+        seen_error = False
+        next_heartbeat_seq = 10_000  # heartbeat seq pool — separate from build seq
+        try:
+            while True:
+                try:
+                    kind, payload = await asyncio.wait_for(
+                        queue.get(), timeout=_PERSONA_BUILD_HEARTBEAT_S
+                    )
+                except asyncio.TimeoutError:
+                    # AC4: heartbeat
+                    next_heartbeat_seq += 1
+                    yield _persona_build_sse_payload(
+                        seq=next_heartbeat_seq,
+                        type_="heartbeat",
+                        ts=time.time(),
+                        data={},
+                    )
+                    continue
+
+                if kind == "__done__":
+                    break
+
+                if kind == "event":
+                    yield _persona_build_sse_payload(
+                        seq=payload.seq,
+                        type_=payload.type,
+                        ts=payload.ts,
+                        data=payload.data,
+                    )
+                    if payload.type == "error":
+                        seen_error = True
+                elif kind == "fallback_error" and not seen_error:
+                    next_heartbeat_seq += 1
+                    yield _persona_build_sse_payload(
+                        seq=next_heartbeat_seq,
+                        type_="error",
+                        ts=time.time(),
+                        data=payload,
+                    )
+        except asyncio.CancelledError:
+            # AC9: client disconnected — producer keeps running in background
+            # to completion (it has its own try/finally + PersonaBuildCache write).
+            raise
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

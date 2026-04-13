@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Variant D · Obsidian 学术风 — Persona Editor</title>
+<style>
+  :root {
+    --bg:#FAF8F3; --bg-paper:#FDFBF6; --rule:#D8D2C2; --rule-soft:#E8E4D8;
+    --text:#1F1A12; --muted:#6E6557; --faint:#9A9080;
+    --green:#1F6649; --green-soft:rgba(31,102,73,0.10);
+    --highlight:#F3E6A0; --highlight-soft:rgba(243,230,160,0.45);
+    --rose:#9C4747; --rose-soft:rgba(156,71,71,0.10);
+    --serif: "Crimson Pro", "Source Serif Pro", "Noto Serif SC", Georgia, "Songti SC", serif;
+    --sans: "Inter", -apple-system, "PingFang SC", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14.5px; line-height:1.7;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+    background-image: radial-gradient(rgba(120,100,60,0.04) 1px, transparent 1px);
+    background-size: 6px 6px;
+  }
+
+  .topbar { display:flex; align-items:center; gap:10px; padding:10px 28px; border-bottom:1px solid var(--rule); background:var(--bg-paper); font-size:13px; }
+  .crumb { font-family:var(--serif); color:var(--muted); }
+  .crumb .arrow { margin:0 4px; color:var(--faint); }
+  .crumb b { color:var(--text); font-weight:600; }
+  .ava-sm { width:24px; height:24px; border-radius:50%; background:var(--green); color:white; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+  .v-mono { font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .meta-stats { margin-left:auto; font-family:var(--serif); font-style:italic; font-size:12.5px; color:var(--muted); }
+  .meta-stats .n { color:var(--text); font-weight:600; font-style:normal; font-family:var(--sans); }
+
+  .page { display:grid; grid-template-columns: 1.15fr 1fr; gap:0; max-width:1280px; margin:0 auto; }
+
+  /* left: outline */
+  .outline { padding:32px 36px 80px; border-right:1px solid var(--rule); background:var(--bg-paper); position:relative; }
+
+  h2.chap { font-family:var(--serif); font-weight:700; font-size:22px; margin:28px 0 4px; letter-spacing:-0.01em; }
+  h2.chap:first-child { margin-top:0; }
+  h2.chap .roman { color:var(--muted); font-weight:400; font-style:italic; margin-right:8px; }
+  .chap-rule { border:0; border-top:1px solid var(--rule); margin:0 0 14px; }
+
+  .claim { padding:6px 8px; margin:0 -8px; border-radius:3px; cursor:default; transition:background .15s; position:relative; }
+  .claim:hover { background:var(--highlight-soft); }
+  .claim sup { font-family:var(--mono); font-size:10px; color:var(--green); margin-left:2px; vertical-align:super; }
+  .claim p { margin:0; font-family:var(--serif); font-size:16px; line-height:1.55; }
+
+  .claim.thin { background:var(--highlight-soft); }
+  .claim.thin::after {
+    content:'? evidence thin'; position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    font-family:var(--serif); font-style:italic; font-size:11px; color:var(--rose);
+    padding:2px 6px; background:var(--rose-soft); border-radius:3px;
+  }
+  .claim.thin sup { color:var(--rose); }
+  .claim.thin p { padding-right:120px; }
+
+  /* right: evidence apparatus */
+  .apparatus { padding:32px 36px 80px; background:var(--bg); position:relative; }
+  .apparatus::before {
+    content:''; position:absolute; top:0; left:-1px; bottom:0; width:1px; background:var(--rule);
+  }
+  .app-title { font-family:var(--serif); font-weight:700; font-size:18px; margin-bottom:2px; }
+  .app-sub { font-family:var(--serif); font-style:italic; color:var(--muted); margin-bottom:24px; }
+  .app-sub .pval { color:var(--text); font-style:normal; font-family:var(--mono); }
+
+  .footnote { display:flex; gap:14px; padding:16px 0; border-top:1px solid var(--rule-soft); }
+  .footnote .num { font-family:var(--mono); font-size:13px; color:var(--green); font-weight:600; min-width:28px; padding-top:1px; }
+  .footnote .body { flex:1; }
+  .footnote .meta { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .footnote .meta .src { padding:1px 6px; background:var(--bg-paper); border:1px solid var(--rule); border-radius:3px; }
+  .footnote blockquote { margin:0; padding:0 0 0 12px; border-left:3px solid var(--rule); font-family:var(--serif); font-size:14.5px; color:var(--text); line-height:1.6; }
+  .footnote blockquote em { font-style:italic; color:var(--muted); }
+  .footnote .actions { margin-top:8px; display:flex; gap:14px; font-size:12px; color:var(--muted); font-family:var(--serif); font-style:italic; }
+  .footnote .actions span { cursor:pointer; }
+  .footnote .actions span:hover { color:var(--green); }
+
+  /* page footer */
+  .pagefoot { display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-top:1px solid var(--rule); font-family:var(--serif); font-size:13px; color:var(--muted); max-width:1280px; margin:0 auto; }
+  .pagefoot a { color:var(--green); text-decoration:underline; text-decoration-style:dotted; cursor:pointer; }
+  .pagefoot .pageno { font-style:italic; }
+
+  /* margin annotation */
+  .marginalia {
+    position:absolute; right:8px; transform:translateX(100%); margin-left:6px;
+    width:140px; padding:6px 10px; background:var(--rose-soft); border-left:2px solid var(--rose);
+    font-family:var(--serif); font-style:italic; font-size:11px; color:var(--rose);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="crumb">Personas <span class="arrow">›</span> <b>张伟</b></span>
+  <span class="ava-sm">张</span>
+  <span class="v-mono">v2</span>
+  <span class="meta-stats"><span class="n">5</span> layers · <span class="n">27</span> traits · <span class="n">81</span> citations</span>
+</div>
+
+<div class="page">
+
+  <!-- left outline -->
+  <div class="outline">
+
+    <h2 class="chap"><span class="roman">I.</span>Hard Rules</h2>
+    <hr class="chap-rule">
+    <div class="claim"><p>绝不在会议上公开承诺预算<sup>1</sup></p></div>
+    <div class="claim"><p>不接受口头确认，必须邮件留痕<sup>2</sup></p></div>
+    <div class="claim"><p>紧急方案默认拖到周四对齐会再决<sup>3</sup></p></div>
+
+    <h2 class="chap"><span class="roman">II.</span>Identity</h2>
+    <hr class="chap-rule">
+    <div class="claim"><p>技术出身，空降任职 6 个月<sup>4</sup></p></div>
+    <div class="claim thin"><p>Q4 KPI 压力大，董事会关注增长<sup>5</sup></p></div>
+    <div class="claim"><p>毕业于美国 top-30 工程院校<sup>6</sup></p></div>
+
+    <h2 class="chap"><span class="roman">III.</span>Expression</h2>
+    <hr class="chap-rule">
+    <div class="claim"><p>口头禅：「这事儿先不急」<sup>7</sup></p></div>
+    <div class="claim"><p>用「但是」开启反驳，频率 3.2/对话<sup>8</sup></p></div>
+    <div class="claim"><p>消息末尾习惯加「。」不加「～」，正式场合更明显<sup>9</sup></p></div>
+
+    <h2 class="chap"><span class="roman">IV.</span>Decision</h2>
+    <hr class="chap-rule">
+    <div class="claim" style="background:var(--green-soft);"><p>默认看数据，但涉及自身考核时变情绪化<sup>10</sup></p></div>
+    <div class="claim"><p>决策前追问 3 次根因，常用反问句式<sup>11</sup></p></div>
+
+    <h2 class="chap"><span class="roman">V.</span>Interpersonal</h2>
+    <hr class="chap-rule">
+    <div class="claim"><p>对上：迅速迎合、不唱反调<sup>12</sup></p></div>
+    <div class="claim"><p>对下：严厉施压、常用沉默测试<sup>13</sup></p></div>
+
+  </div>
+
+  <!-- right apparatus -->
+  <div class="apparatus">
+    <div class="app-title">Evidence · Decision looks at data</div>
+    <div class="app-sub"><span class="pval">p = 0.82</span> (n = 3 citations) · last revised 2026-04-13</div>
+
+    <div class="footnote">
+      <div class="num">[10a]</div>
+      <div class="body">
+        <div class="meta"><span>2025-09-12 14:23</span> · <span class="src">chat / 内部群组</span></div>
+        <blockquote>"Q3 ROI 数据是我能接受方案的唯一前提，<em>别给我画饼</em>。"</blockquote>
+        <div class="actions"><span>📎 expand</span><span>🔗 jump to source</span></div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <div class="num">[10b]</div>
+      <div class="body">
+        <div class="meta"><span>2025-09-18 10:07</span> · <span class="src">email / 战略会前</span></div>
+        <blockquote>"我需要看到过去 3 个 quarter 的留存趋势再决定，否则我们继续观察。"</blockquote>
+        <div class="actions"><span>📎 expand</span><span>🔗 jump to source</span></div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <div class="num">[10c]</div>
+      <div class="body">
+        <div class="meta"><span>2025-10-05 16:40</span> · <span class="src">meeting-notes</span></div>
+        <blockquote>"讨论前先把数据表发给我，<em>没有数据的会我不开</em>。"</blockquote>
+        <div class="actions"><span>📎 expand</span><span>🔗 jump to source</span></div>
+      </div>
+    </div>
+
+    <!-- contradiction note -->
+    <div class="footnote" style="background:var(--rose-soft); border-left:3px solid var(--rose); padding-left:14px; margin-top:18px; border-top:none;">
+      <div class="num" style="color:var(--rose)">⚠</div>
+      <div class="body">
+        <div class="meta" style="color:var(--rose)">contradiction · 2025-11-02 21:15 · chat</div>
+        <blockquote style="border-left-color:var(--rose);">"管他什么数据，我说停就停。"</blockquote>
+        <div class="actions" style="color:var(--rose)"><em>反例 — 涉及自身考核时数据信仰失效</em></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pagefoot">
+  <a>Save draft</a>
+  <span class="pageno">— 1 of 1 —</span>
+  <a>Next: 开始演练 »</a>
+</div>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 # input: Pydantic BaseModel
-# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO
+# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO, PersonaBuildRequestDTO (Story 2.5)
 # owner: wanhua.gu
 # pos: 应用层 - 聊天室、消息、角色、场景数据传输对象；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """DTOs for stakeholder chat room and message operations."""
@@ -411,11 +411,13 @@ class GrowthInsightDTO(BaseModel):
 
 class BattlePrepGenerateDTO(BaseModel):
     """Input: user's meeting description."""
+
     description: str = Field(..., min_length=10, max_length=5000)
 
 
 class BattlePrepResultDTO(BaseModel):
     """Output: AI-generated persona + scenario + training points."""
+
     persona_name: str
     persona_role: str
     persona_style: str
@@ -425,6 +427,7 @@ class BattlePrepResultDTO(BaseModel):
 
 class StartBattleDTO(BaseModel):
     """Input: confirmed config from user."""
+
     persona_name: str = Field(..., min_length=1, max_length=100)
     persona_role: str = Field(..., min_length=1, max_length=200)
     persona_style: str = Field(..., min_length=1, max_length=2000)
@@ -435,12 +438,14 @@ class StartBattleDTO(BaseModel):
 
 class TacticItem(BaseModel):
     """A single tactic in the cheat sheet."""
+
     situation: str
     response: str
 
 
 class CheatSheetDTO(BaseModel):
     """Output: cheat sheet for the meeting."""
+
     opening: str
     key_tactics: list[TacticItem]
     pitfalls: list[str]
@@ -454,13 +459,34 @@ class CheatSheetDTO(BaseModel):
 
 class ProfileTag(BaseModel):
     """A tag on the profile card."""
+
     text: str
     type: str = Field(..., pattern=r"^(strength|weakness|trait)$")
 
 
 class ProfileCardDTO(BaseModel):
     """Output: profile card data."""
+
     style_label: str
     tags: list[ProfileTag]
     summary: str
     scores: dict[str, float]
+
+
+# ---------------------------------------------------------------------------
+# Persona Builder DTOs (Story 2.5)
+# ---------------------------------------------------------------------------
+
+
+class PersonaBuildRequestDTO(BaseModel):
+    """Input DTO for POST /persona/build (Story 2.5).
+
+    Per-AC validation:
+    - materials: 1..N non-empty strings; total chars ≤ 400_000 (~200k tokens)
+    - target_persona_id / name / role: optional
+    """
+
+    materials: list[str] = Field(..., min_length=1)
+    target_persona_id: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    role: Optional[str] = Field(None, min_length=1, max_length=200)

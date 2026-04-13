@@ -178,7 +178,9 @@ class BattlePrepService:
         self._cleanup_old_personas()
 
         persona_id = f"bp-{uuid.uuid4().hex[:8]}"
-        difficulty_instruction = _DIFFICULTY_PROMPTS.get(dto.difficulty, _DIFFICULTY_PROMPTS["normal"])
+        difficulty_instruction = _DIFFICULTY_PROMPTS.get(
+            dto.difficulty, _DIFFICULTY_PROMPTS["normal"]
+        )
 
         persona_content = (
             f"---\ntemporary: true\n---\n\n"
@@ -277,10 +279,12 @@ class BattlePrepService:
         tactics = []
         for t in parsed.get("key_tactics", []):
             if isinstance(t, dict):
-                tactics.append(TacticItem(
-                    situation=t.get("situation", ""),
-                    response=t.get("response", ""),
-                ))
+                tactics.append(
+                    TacticItem(
+                        situation=t.get("situation", ""),
+                        response=t.get("response", ""),
+                    )
+                )
 
         return CheatSheetDTO(
             opening=parsed.get("opening", ""),
