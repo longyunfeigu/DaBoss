@@ -31,16 +31,32 @@ class StakeholderPersonaModel(Base, TimestampMixin):
     avatar_color = Column(String(20), nullable=True, comment="头像颜色")
     organization_id = Column(Integer, nullable=True, comment="所属组织ID")
     team_id = Column(Integer, nullable=True, comment="所属团队ID")
-    profile_summary = Column(Text, nullable=False, default="", server_default="", comment="画像摘要")
-    full_content = Column(Text, nullable=False, default="", server_default="", comment="v1 markdown 全文")
+    profile_summary = Column(
+        Text, nullable=False, default="", server_default="", comment="画像摘要"
+    )
+    full_content = Column(
+        Text, nullable=False, default="", server_default="", comment="v1 markdown 全文"
+    )
     voice_id = Column(String(100), nullable=True, comment="TTS voice id")
-    voice_speed = Column(Float, nullable=False, default=1.0, server_default="1.0", comment="TTS 语速")
+    voice_speed = Column(
+        Float, nullable=False, default=1.0, server_default="1.0", comment="TTS 语速"
+    )
     voice_style = Column(String(50), nullable=True, comment="TTS 风格")
 
     # v2 structured fields
-    structured_profile = Column(JSON, nullable=True, comment="v2 5-layer 结构化数据 (hard_rules/identity/expression/decision/interpersonal)")
+    structured_profile = Column(
+        JSON,
+        nullable=True,
+        comment="v2 5-layer 结构化数据 (hard_rules/identity/expression/decision/interpersonal)",
+    )
     evidence_citations = Column(JSON, nullable=True, comment="v2 证据链 (list[Evidence])")
-    schema_version = Column(Integer, nullable=False, default=1, server_default="1", comment="schema 版本: 1=legacy markdown, 2=structured")
+    schema_version = Column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+        comment="schema 版本: 1=legacy markdown, 2=structured",
+    )
     source_materials = Column(JSON, nullable=True, comment="v2 原始素材 id/片段列表")
     legacy_content = Column(Text, nullable=True, comment="迁移前 markdown 原文备份")
 

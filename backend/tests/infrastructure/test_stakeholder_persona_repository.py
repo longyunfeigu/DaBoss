@@ -54,15 +54,11 @@ def _make_v2_persona(persona_id: str = "cfo") -> Persona:
         profile_summary="数字至上",
         full_content="",
         hard_rules=[HardRule(statement="预算超支必报", severity="critical")],
-        identity=IdentityProfile(
-            background="会计师", core_values=["成本"], hidden_agenda="裁员"
-        ),
+        identity=IdentityProfile(background="会计师", core_values=["成本"], hidden_agenda="裁员"),
         expression=ExpressionStyle(
             tone="严谨", catchphrases=["数字会说话"], interruption_tendency="low"
         ),
-        decision=DecisionPattern(
-            style="保守", risk_tolerance="low", typical_questions=["ROI?"]
-        ),
+        decision=DecisionPattern(style="保守", risk_tolerance="low", typical_questions=["ROI?"]),
         interpersonal=InterpersonalStyle(
             authority_mode="正式", triggers=["数据造假"], emotion_states=["严肃"]
         ),
@@ -96,6 +92,7 @@ def _make_v2_persona(persona_id: str = "cfo") -> Persona:
 @pytest.mark.asyncio
 async def test_schema_columns_exist(engine) -> None:
     """AC4: 所有要求的列存在。"""
+
     def _inspect(sync_conn):
         insp = inspect(sync_conn)
         cols = {c["name"] for c in insp.get_columns("stakeholder_personas")}

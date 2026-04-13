@@ -107,9 +107,7 @@ def test_evidence_invalid_layer_raises() -> None:
     ["hard_rules", "identity", "expression", "decision", "interpersonal"],
 )
 def test_evidence_all_valid_layers(layer: str) -> None:
-    ev = Evidence(
-        claim="x", citations=[], confidence=0.5, source_material_id="m", layer=layer
-    )
+    ev = Evidence(claim="x", citations=[], confidence=0.5, source_material_id="m", layer=layer)
     assert ev.layer == layer
 
 
@@ -140,9 +138,7 @@ def test_persona_v2_has_all_fields() -> None:
         name="CFO",
         role="首席财务官",
         hard_rules=[HardRule(statement="预算超支必须事前报告", severity="critical")],
-        identity=IdentityProfile(
-            background="会计师出身", core_values=["成本"], hidden_agenda=None
-        ),
+        identity=IdentityProfile(background="会计师出身", core_values=["成本"], hidden_agenda=None),
         expression=ExpressionStyle(
             tone="严谨", catchphrases=["数字会说话"], interruption_tendency="low"
         ),

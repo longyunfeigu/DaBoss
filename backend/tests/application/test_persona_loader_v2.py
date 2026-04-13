@@ -110,9 +110,7 @@ def test_v1_persona_returns_full_content(v1_markdown_dir: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_v2_persona_returns_structured_profile(
-    session_factory, tmp_path: Path
-) -> None:
+async def test_v2_persona_returns_structured_profile(session_factory, tmp_path: Path) -> None:
     """v2 persona 走 DB，5 层 structured 字段非空。"""
     await _seed_v2_persona(session_factory)
 
@@ -137,9 +135,7 @@ async def test_v2_persona_returns_structured_profile(
 
 
 @pytest.mark.asyncio
-async def test_v2_only_skips_markdown_scan(
-    session_factory, tmp_path: Path
-) -> None:
+async def test_v2_only_skips_markdown_scan(session_factory, tmp_path: Path) -> None:
     """空 markdown 目录下仍可返回 v2 persona。"""
     await _seed_v2_persona(session_factory, "boss")
 
@@ -159,9 +155,7 @@ async def test_v2_only_skips_markdown_scan(
 
 
 @pytest.mark.asyncio
-async def test_v1_v2_merge_v2_wins_on_conflict(
-    session_factory, v1_markdown_dir: Path
-) -> None:
+async def test_v1_v2_merge_v2_wins_on_conflict(session_factory, v1_markdown_dir: Path) -> None:
     """v1 markdown + v2 DB 合并时，同 id 冲突 v2 优先。"""
     # v1 markdown 目录里有 boss.md
     # DB 里也有 id=boss 的 v2 persona

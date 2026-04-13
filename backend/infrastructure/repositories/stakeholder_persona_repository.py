@@ -53,7 +53,9 @@ def _deserialize_structured_profile(data: Optional[dict]) -> dict:
         "identity": IdentityProfile(**data["identity"]) if data.get("identity") else None,
         "expression": ExpressionStyle(**data["expression"]) if data.get("expression") else None,
         "decision": DecisionPattern(**data["decision"]) if data.get("decision") else None,
-        "interpersonal": InterpersonalStyle(**data["interpersonal"]) if data.get("interpersonal") else None,
+        "interpersonal": (
+            InterpersonalStyle(**data["interpersonal"]) if data.get("interpersonal") else None
+        ),
     }
 
 
@@ -114,7 +116,9 @@ class SQLAlchemyStakeholderPersonaRepository(StakeholderPersonaRepository):
         model.structured_profile = _serialize_structured_profile(persona)
         model.evidence_citations = _serialize_evidences(persona)
         model.schema_version = persona.schema_version
-        model.source_materials = list(persona.source_materials) if persona.source_materials else None
+        model.source_materials = (
+            list(persona.source_materials) if persona.source_materials else None
+        )
         model.legacy_content = persona.legacy_content
 
     async def save_structured_persona(self, persona: Persona) -> Persona:
@@ -134,17 +138,13 @@ class SQLAlchemyStakeholderPersonaRepository(StakeholderPersonaRepository):
         model = await self.session.get(StakeholderPersonaModel, persona_id)
         return self._to_entity(model) if model else None
 
-    async def get_with_evidence(
-        self, persona_id: str
-    ) -> Optional[tuple[Persona, list[Evidence]]]:
+    async def get_with_evidence(self, persona_id: str) -> Optional[tuple[Persona, list[Evidence]]]:
         persona = await self.get_by_id(persona_id)
         if persona is None:
             return None
         return persona, list(persona.evidence_citations)
 
-    async def list_all(
-        self, *, schema_version: Optional[int] = None
-    ) -> list[Persona]:
+    async def list_all(self, *, schema_version: Optional[int] = None) -> list[Persona]:
         query = select(StakeholderPersonaModel)
         if schema_version is not None:
             query = query.where(StakeholderPersonaModel.schema_version == schema_version)

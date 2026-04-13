@@ -210,9 +210,7 @@ class StakeholderPersonaRepository(ABC):
     async def get_by_id(self, persona_id: str) -> Optional[Persona]: ...
 
     @abstractmethod
-    async def get_with_evidence(
-        self, persona_id: str
-    ) -> Optional[tuple[Persona, list[Evidence]]]:
+    async def get_with_evidence(self, persona_id: str) -> Optional[tuple[Persona, list[Evidence]]]:
         """Return persona + its evidence citations.
 
         Returns None if persona not found.
@@ -220,8 +218,6 @@ class StakeholderPersonaRepository(ABC):
         ...
 
     @abstractmethod
-    async def list_all(
-        self, *, schema_version: Optional[int] = None
-    ) -> list[Persona]:
+    async def list_all(self, *, schema_version: Optional[int] = None) -> list[Persona]:
         """List personas, optionally filtered by schema_version."""
         ...

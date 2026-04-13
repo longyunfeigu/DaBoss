@@ -102,9 +102,7 @@ class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
         self.register_repository(
             "competency_evaluation_repository", self.competency_evaluation_repository
         )
-        self.stakeholder_persona_repository = SQLAlchemyStakeholderPersonaRepository(
-            self.session
-        )
+        self.stakeholder_persona_repository = SQLAlchemyStakeholderPersonaRepository(self.session)
         self.register_repository(
             "stakeholder_persona_repository", self.stakeholder_persona_repository
         )
