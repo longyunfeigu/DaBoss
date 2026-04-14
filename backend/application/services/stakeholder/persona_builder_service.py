@@ -58,6 +58,13 @@ logger = get_logger(__name__)
 _AGENT_OUTPUT_FILE = "output/persona.md"
 _DEFAULT_TOTAL_TIMEOUT_S = 900
 _DEFAULT_POST_TIMEOUT_S = 180
+_JSON_REPAIR_SYSTEM_PROMPT = """Repair this invalid JSON into strict JSON.
+
+Output ONLY one valid JSON object. Do not add markdown fences or prose.
+Preserve all semantic content and required schema keys. Fix only JSON syntax:
+missing commas, trailing commas, comments, unquoted keys, single quotes, and
+unescaped double quotes inside string values.
+"""
 
 # Map known prompt file stems to user-facing phase descriptions.
 _PROMPT_PHASE_MAP: dict[str, str] = {
@@ -434,7 +441,7 @@ class PersonaBuilderService:
             LLMMessage(role="user", content=user_content),
         ]
         try:
-            response = await self._llm.generate(messages, temperature=0.2)
+            response = await self._llm.generate(messages, temperature=0.0)
         except Exception as exc:
             raise BuildError(
                 f"markdown→JSON LLM call failed: {exc}",
@@ -442,11 +449,39 @@ class PersonaBuilderService:
             ) from exc
         try:
             return parse_llm_json(response.content)
-        except MigrationError as exc:
-            raise BuildError(
-                f"markdown→JSON parse failed: {exc}",
-                error_code="STRUCTURED_PARSE_FAILED",
-            ) from exc
+        except MigrationError as first_exc:
+            logger.warning(
+                "persona_build_parse_json_retry",
+                error=str(first_exc),
+            )
+            try:
+                repair_response = await self._llm.generate(
+                    [
+                        LLMMessage(role="system", content=_JSON_REPAIR_SYSTEM_PROMPT),
+                        LLMMessage(
+                            role="user",
+                            content=(
+                                f"Parse error:\n{first_exc}\n\n"
+                                "Invalid JSON to repair:\n"
+                                f"{response.content}"
+                            ),
+                        ),
+                    ],
+                    temperature=0.0,
+                )
+            except Exception as exc:
+                raise BuildError(
+                    f"markdown→JSON repair LLM call failed: {exc}",
+                    error_code="STRUCTURED_PARSE_LLM_FAILED",
+                ) from exc
+
+            try:
+                return parse_llm_json(repair_response.content)
+            except MigrationError as repair_exc:
+                raise BuildError(
+                    f"markdown→JSON parse failed: {first_exc}; repair failed: {repair_exc}",
+                    error_code="STRUCTURED_PARSE_FAILED",
+                ) from repair_exc
 
 
 # ---------------------------------------------------------------------------

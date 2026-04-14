@@ -363,6 +363,33 @@ async def test_build_adversarialize_bad_json_downgrades_not_raises(tmp_path):
     assert "adversarialize:failed" in repo.saved[0].source_materials
 
 
+@pytest.mark.asyncio
+async def test_build_repairs_invalid_parse_json_once_before_persisting(tmp_path):
+    ws = _write_markdown(tmp_path)
+    agent = _FakeAgentClient(ws)
+    llm = AsyncMock()
+    llm.generate.side_effect = [
+        LLMResponse(
+            content='{"hard_rules": [{"statement": "禁止模糊承诺" "severity": "high"}]}',
+            model="m",
+        ),
+        LLMResponse(content=json.dumps(_PARSE_JSON), model="m"),
+        LLMResponse(content=json.dumps(_HOSTILE_JSON), model="m"),
+    ]
+    repo = _FakeRepo()
+    service = _make_service(agent=agent, llm=llm, repo=repo)
+
+    events = []
+    async for ev in service.build(user_id="u1", materials=["m"]):
+        events.append(ev)
+
+    assert len(repo.saved) == 1
+    assert any(ev.type == BUILD_PERSIST_DONE for ev in events)
+    assert llm.generate.await_count == 3
+    repair_messages = llm.generate.await_args_list[1].args[0]
+    assert "Repair this invalid JSON" in repair_messages[0].content
+
+
 # ---------------------------------------------------------------------------
 # AC6: total timeout → BuildTimeoutError + error event
 # ---------------------------------------------------------------------------

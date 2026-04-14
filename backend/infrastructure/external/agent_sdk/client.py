@@ -127,7 +127,12 @@ class AgentSkillClient:
             f"`materials/{n - 1}.txt`. Read all materials first, then run the skill's "
             "7-step pipeline (intake → work_analyzer → persona_analyzer → "
             "work_builder → persona_builder → merger → correction_handler). "
-            "Write the final markdown persona to `output/persona.md`.",
+            "Write the final markdown persona to `output/persona.md`. "
+            "The `output/` directory already exists in this workspace. "
+            "Do NOT create or overwrite the `output/` directory itself; "
+            "write exactly one file: `output/persona.md`. "
+            "Do NOT create `colleagues/`, `work.md`, `meta.json`, or a generated "
+            "`SKILL.md` in this DaBoss runtime.",
         ]
 
         if target_name:

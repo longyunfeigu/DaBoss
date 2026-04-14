@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import uuid
@@ -37,25 +36,45 @@ _GENERATE_PROMPT = """\
 
 {description}
 
-## 输出要求
-
-输出严格 JSON，不要输出其他内容：
-
-```json
-{{
-  "persona_name": "对方的称呼（如：张总、李经理）",
-  "persona_role": "对方的职位（如：技术副总裁）",
-  "persona_style": "对方的沟通风格描述（100-200字，包含性格特点、决策偏好、常见反应模式）",
-  "scenario_context": "对话场景背景（100-200字，包含会议目的、核心矛盾点、双方立场）",
-  "training_points": ["训练重点1", "训练重点2", "训练重点3"]
-}}
-```
-
-规则：
+## 规则
 - persona_style 要具体，不要泛泛描述，要像真人一样有个性
 - training_points 必须 2-3 个，每个是一个具体的沟通挑战（如"如何应对对方用预算紧张来拒绝"）
 - scenario_context 要包含冲突焦点
 """
+
+_GENERATE_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "persona_name": {
+            "type": "string",
+            "description": "对方的称呼（如：张总、李经理）",
+        },
+        "persona_role": {
+            "type": "string",
+            "description": "对方的职位（如：技术副总裁）",
+        },
+        "persona_style": {
+            "type": "string",
+            "description": "对方的沟通风格描述（100-200字，包含性格特点、决策偏好、常见反应模式）",
+        },
+        "scenario_context": {
+            "type": "string",
+            "description": "对话场景背景（100-200字，包含会议目的、核心矛盾点、双方立场）",
+        },
+        "training_points": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "2-3个训练重点，每个是具体的沟通挑战",
+        },
+    },
+    "required": [
+        "persona_name",
+        "persona_role",
+        "persona_style",
+        "scenario_context",
+        "training_points",
+    ],
+}
 
 _CHEAT_SHEET_PROMPT = """\
 你是一个职场沟通教练。用户刚完成了一场模拟对话练习，请根据对话记录生成一份简洁实用的"话术纸条"，用户可以带进真实会议。
@@ -72,44 +91,53 @@ _CHEAT_SHEET_PROMPT = """\
 
 {conversation}
 
-## 输出要求
-
-输出严格 JSON，不要输出其他内容：
-
-```json
-{{
-  "opening": "建议的开场白（1-2句话，直接可用）",
-  "key_tactics": [
-    {{"situation": "对方可能说/做的事", "response": "你应该这样回应（直接可用的话术）"}},
-    {{"situation": "...", "response": "..."}}
-  ],
-  "pitfalls": ["避免说的话或做的事1", "避免说的话或做的事2"],
-  "bottom_line": "如果主要目标达不成，退而求其次的策略（1-2句话）"
-}}
-```
-
-规则：
+## 规则
 - opening 必须是直接能说出口的话，不是抽象建议
 - key_tactics 针对每个训练重点至少 1 条，每条 response 是直接可用的话术
 - pitfalls 从对话中用户的实际失误提炼，2-4 条
 - bottom_line 要具体可操作
 """
 
+_CHEAT_SHEET_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "opening": {
+            "type": "string",
+            "description": "建议的开场白（1-2句话，直接可用）",
+        },
+        "key_tactics": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "situation": {"type": "string", "description": "对方可能说/做的事"},
+                    "response": {
+                        "type": "string",
+                        "description": "你应该这样回应（直接可用的话术）",
+                    },
+                },
+                "required": ["situation", "response"],
+            },
+            "description": "关键话术列表",
+        },
+        "pitfalls": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "避免说的话或做的事（2-4条）",
+        },
+        "bottom_line": {
+            "type": "string",
+            "description": "如果主要目标达不成，退而求其次的策略",
+        },
+    },
+    "required": ["opening", "key_tactics", "pitfalls", "bottom_line"],
+}
+
 _DIFFICULTY_PROMPTS = {
     "easy": "你态度相对友好，愿意倾听，但会提出合理的质疑。",
     "normal": "你按照画像正常沟通，会质疑不充分的论点，但不会刻意刁难。",
     "hard": "你非常强势，会频繁打断、质疑数据来源、用情绪施压。",
 }
-
-
-def _strip_json_fences(text: str) -> str:
-    """Strip markdown code fences from LLM output."""
-    raw = text.strip()
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        lines = [line for line in lines if not line.strip().startswith("```")]
-        raw = "\n".join(lines)
-    return raw
 
 
 class BattlePrepService:
@@ -151,14 +179,17 @@ class BattlePrepService:
         """Step 1->2: User description -> LLM generates persona + scenario + training points."""
         prompt = _GENERATE_PROMPT.format(description=description)
         messages = [LLMMessage(role="user", content=prompt)]
-        response = await self._llm.generate(messages, temperature=0.4)
-
-        raw = _strip_json_fences(response.content)
         try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            logger.error("LLM returned invalid JSON for battle prep: %s", raw[:500])
-            raise ValueError("AI 生成失败，请重试")
+            parsed = await self._llm.generate_structured(
+                messages,
+                schema=_GENERATE_SCHEMA,
+                schema_name="generate_battle_prep",
+                schema_description="生成模拟对话所需的角色和场景",
+                temperature=0.4,
+            )
+        except Exception as exc:
+            logger.error("LLM call failed for battle prep: %s", exc)
+            raise ValueError("AI 服务暂时不可用，请稍后重试") from exc
 
         points = parsed.get("training_points", [])
         if len(points) < 2:
@@ -277,14 +308,17 @@ class BattlePrepService:
         )
 
         llm_messages = [LLMMessage(role="user", content=prompt)]
-        response = await self._llm.generate(llm_messages, temperature=0.3)
-
-        raw = _strip_json_fences(response.content)
         try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            logger.error("LLM returned invalid JSON for cheat sheet: %s", raw[:500])
-            raise ValueError("话术纸条生成失败，请重试")
+            parsed = await self._llm.generate_structured(
+                llm_messages,
+                schema=_CHEAT_SHEET_SCHEMA,
+                schema_name="generate_cheat_sheet",
+                schema_description="生成话术纸条",
+                temperature=0.3,
+            )
+        except Exception as exc:
+            logger.error("LLM call failed for cheat sheet: %s", exc)
+            raise ValueError("话术纸条生成失败，请重试") from exc
 
         tactics = []
         for t in parsed.get("key_tactics", []):

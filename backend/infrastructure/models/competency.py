@@ -40,9 +40,9 @@ class CompetencyEvaluationModel(Base):
     )
     room_id = Column(
         Integer,
-        ForeignKey("stakeholder_chat_rooms.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="所属聊天室ID",
+        ForeignKey("stakeholder_chat_rooms.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="所属聊天室ID（会话删除后置 NULL，评估保留）",
     )
     scores = Column(JSON, nullable=False, default=dict, comment="6维度评分JSON")
     overall_score = Column(Float, nullable=False, default=0.0, comment="总体平均分")

@@ -83,82 +83,94 @@
   overflow-y: auto;
 }
 
-/* Team list */
+/* ── Team list ────────────────────────────────── */
 .team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.team-item-block {
+  background: var(--bg-base);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin-bottom: 10px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+
+.team-item-block:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .team-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.team-item:last-child {
-  border-bottom: none;
+  padding: 10px 14px;
 }
 
 .team-item-info {
   flex: 1;
+  min-width: 0;
 }
 
 .team-item-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .team-item-desc {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.team-item-block {
-  border-bottom: 1px solid var(--border);
-}
-
-.team-item-block:last-child {
-  border-bottom: none;
+  margin-top: 2px;
 }
 
 .team-delete-btn {
-  padding: 4px 8px;
-  border: none;
+  padding: 4px 10px;
+  border: 1px solid transparent;
   background: none;
   color: var(--text-muted);
   cursor: pointer;
   font-size: 12px;
   border-radius: var(--radius-sm);
   white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 
 .team-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
   color: #ef4444;
 }
 
-/* Team members */
+/* ── Team members ────────────────────────────── */
 .team-members {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px 10px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
 }
 
 .team-member-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 4px 10px;
   background: var(--bg-base);
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   font-size: 12px;
   color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.team-member-chip:hover {
+  border-color: var(--green);
 }
 
 .team-member-dot {
@@ -177,6 +189,7 @@
   line-height: 1;
   padding: 0 2px;
   margin-left: 2px;
+  transition: color var(--transition-fast);
 }
 
 .team-member-remove:hover {
@@ -190,14 +203,15 @@
 }
 
 .team-add-member-select {
-  padding: 2px 6px;
+  padding: 4px 10px;
   border: 1px dashed var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: none;
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
   outline: none;
+  transition: all var(--transition-fast);
 }
 
 .team-add-member-select:hover {
@@ -205,67 +219,131 @@
   color: var(--green);
 }
 
+.team-add-member-select:focus {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ── Add team form ───────────────────────────── */
 .add-team-form {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  align-items: center;
 }
 
 .add-team-form input {
   flex: 1;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 13px;
   outline: none;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
 }
 
 .add-team-form input:focus {
   border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(45, 156, 111, 0.1);
+}
+
+.add-team-form input::placeholder {
+  color: var(--text-muted);
 }
 
 .add-team-form button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: none;
   background: var(--green);
   color: white;
   border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.add-team-form button:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 .add-team-form button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* Relationship list */
-.rel-list {
-  border: 1px solid var(--border);
+/* ── Unassigned hint ─────────────────────────── */
+.unassigned-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
   border-radius: var(--radius-sm);
-  margin-bottom: 10px;
+  font-size: 12px;
+  color: #92400e;
+}
+
+.unassigned-hint-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Relationship list ───────────────────────── */
+.rel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .rel-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   font-size: 13px;
+  transition: box-shadow var(--transition-fast);
 }
 
-.rel-item:last-child {
-  border-bottom: none;
+.rel-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.rel-item-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rel-item-persona {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rel-item-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 4px;
 }
 
 .rel-type-badge {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 500;
-  margin: 0 6px;
+  margin: 0 4px;
 }
 
 .rel-type-badge.superior { background: #fef3c7; color: #92400e; }
@@ -273,45 +351,88 @@
 .rel-type-badge.peer { background: #d1fae5; color: #065f46; }
 .rel-type-badge.cross_department { background: #ede9fe; color: #5b21b6; }
 
+/* ── Add relationship form ───────────────────── */
 .add-rel-form {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .add-rel-form select,
 .add-rel-form input {
-  padding: 6px 10px;
+  padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 13px;
   outline: none;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
 }
 
 .add-rel-form select:focus,
 .add-rel-form input:focus {
   border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(45, 156, 111, 0.1);
+}
+
+.add-rel-form select {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.add-rel-form input {
+  flex: 1;
+  min-width: 80px;
+}
+
+.add-rel-form input::placeholder {
+  color: var(--text-muted);
 }
 
 .add-rel-form button {
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: none;
   background: var(--green);
   color: white;
   border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 
+.add-rel-form button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.add-rel-form button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Relationship form arrow connector ───────── */
+.rel-form-arrow {
+  color: var(--text-muted);
+  font-size: 16px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Empty state ─────────────────────────────── */
 .empty-hint {
-  padding: 16px;
+  padding: 24px 16px;
   text-align: center;
   color: var(--text-muted);
   font-size: 13px;
 }
 
-/* Org selector in sidebar */
+/* ── Org selector in sidebar ─────────────────── */
 .org-section {
   padding: 0 14px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);

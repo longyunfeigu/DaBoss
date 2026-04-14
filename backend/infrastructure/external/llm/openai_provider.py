@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import AsyncIterator, Optional
 
 from openai import AsyncOpenAI
@@ -72,6 +73,43 @@ class OpenAIProvider:
             total_tokens=usage.total_tokens if usage else 0,
             finish_reason=choice.finish_reason,
         )
+
+    async def generate_structured(
+        self,
+        messages: list[LLMMessage],
+        *,
+        schema: dict,
+        schema_name: str = "output",
+        schema_description: str = "",
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> dict:
+        """Use OpenAI function calling to force structured output."""
+        tool_def = {
+            "type": "function",
+            "function": {
+                "name": schema_name,
+                "description": schema_description or f"Output structured data as {schema_name}",
+                "parameters": schema,
+            },
+        }
+
+        response = await self._client.chat.completions.create(
+            model=model or self._default_model,
+            messages=self._build_messages(messages),
+            temperature=temperature if temperature is not None else self._default_temperature,
+            max_tokens=max_tokens or self._default_max_tokens,
+            tools=[tool_def],
+            tool_choice={"type": "function", "function": {"name": schema_name}},
+            stream=False,
+        )
+
+        choice = response.choices[0]
+        if choice.message.tool_calls:
+            return json.loads(choice.message.tool_calls[0].function.arguments)
+
+        raise ValueError(f"Model did not return expected function call '{schema_name}'")
 
     async def stream(
         self,

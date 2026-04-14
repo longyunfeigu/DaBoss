@@ -60,6 +60,33 @@ class LLMPort(Protocol):
         max_tokens: Optional[int] = None,
     ) -> LLMResponse: ...
 
+    async def generate_structured(
+        self,
+        messages: list[LLMMessage],
+        *,
+        schema: dict,
+        schema_name: str = "output",
+        schema_description: str = "",
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> dict:
+        """Generate a response that conforms to the given JSON schema.
+
+        Uses provider-native structured output (e.g. Anthropic tool_choice,
+        OpenAI function calling) so the result is guaranteed to be valid.
+
+        Args:
+            messages: Conversation messages.
+            schema: JSON Schema dict describing the desired output shape.
+            schema_name: Tool/function name used internally by the provider.
+            schema_description: Human-readable description of the output.
+
+        Returns:
+            A dict matching the provided schema.
+        """
+        ...
+
     async def stream(
         self,
         messages: list[LLMMessage],

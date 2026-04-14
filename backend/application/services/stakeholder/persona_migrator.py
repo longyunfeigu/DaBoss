@@ -105,6 +105,22 @@ def _strip_code_fence(raw: str) -> str:
     return text
 
 
+def _fix_json(text: str) -> str:
+    """Best-effort fix for common LLM JSON errors."""
+    import re
+
+    # Remove JavaScript-style comments (// ...) first
+    text = re.sub(r"//[^\n]*", "", text)
+    # Remove trailing commas before } or ]
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+    # Fix unquoted keys: word: → "word":
+    text = re.sub(r"(?<=[{,\n])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r' "\1":', text)
+    # Replace single-quoted strings with double-quoted (global)
+    # This is aggressive but LLM JSON rarely has intentional single quotes
+    text = text.replace("'", '"')
+    return text
+
+
 def parse_llm_json(raw: str) -> dict:
     """Parse LLM response into a dict, stripping code fences; validate required top-level keys.
 
@@ -113,8 +129,12 @@ def parse_llm_json(raw: str) -> dict:
     cleaned = _strip_code_fence(raw)
     try:
         data = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise MigrationError(f"invalid JSON from LLM: {exc}") from exc
+    except json.JSONDecodeError:
+        # Retry with JSON fixes for common LLM errors
+        try:
+            data = json.loads(_fix_json(cleaned))
+        except json.JSONDecodeError as exc:
+            raise MigrationError(f"invalid JSON from LLM: {exc}") from exc
 
     if not isinstance(data, dict):
         raise MigrationError(f"expected JSON object, got {type(data).__name__}")

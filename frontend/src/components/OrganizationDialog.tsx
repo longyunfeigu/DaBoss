@@ -290,38 +290,41 @@ export default function OrganizationDialog({ open, onClose, onOrgChanged, person
                           ) : (
                             <span className="team-members-empty">暂无成员</span>
                           )}
-                          <select
-                            className="team-add-member-select"
-                            value=""
-                            onChange={(e) => e.target.value && handleAssignToTeam(e.target.value, t.id)}
-                          >
-                            <option value="">+ 添加角色</option>
-                            {unassignedPersonas.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
-                            ))}
-                          </select>
+                          {unassignedPersonas.length > 0 && (
+                            <select
+                              className="team-add-member-select"
+                              value=""
+                              onChange={(e) => e.target.value && handleAssignToTeam(e.target.value, t.id)}
+                            >
+                              <option value="">+ 添加角色</option>
+                              {unassignedPersonas.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <div className="empty-hint">暂无团队，添加第一个</div>
+                <div className="empty-hint">暂无团队，添加第一个吧</div>
               )}
 
               {/* Unassigned personas */}
               {unassignedPersonas.length > 0 && teams.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-                  未分配团队的角色：{unassignedPersonas.map((p) => p.name).join('、')}
+                <div className="unassigned-hint">
+                  <span className="unassigned-hint-label">未分配：</span>
+                  <span>{unassignedPersonas.map((p) => p.name).join('、')}</span>
                 </div>
               )}
 
-              <div className="add-team-form" style={{ marginTop: 10 }}>
+              <div className="add-team-form" style={{ marginTop: 12 }}>
                 <input
                   type="text"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  placeholder="团队名称"
+                  placeholder="输入团队名称..."
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTeam()}
                 />
                 <button onClick={handleAddTeam} disabled={!newTeamName.trim()}>添加团队</button>
@@ -335,14 +338,14 @@ export default function OrganizationDialog({ open, onClose, onOrgChanged, person
                 <div className="rel-list">
                   {relationships.map((r) => (
                     <div key={r.id} className="rel-item">
-                      <span>
-                        <strong>{personaName(r.from_persona_id)}</strong>
+                      <div className="rel-item-content">
+                        <span className="rel-item-persona">{personaName(r.from_persona_id)}</span>
                         <span className={`rel-type-badge ${r.relationship_type}`}>
                           {REL_LABELS[r.relationship_type] || r.relationship_type}
                         </span>
-                        <strong>{personaName(r.to_persona_id)}</strong>
-                        {r.description && <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>— {r.description}</span>}
-                      </span>
+                        <span className="rel-item-persona">{personaName(r.to_persona_id)}</span>
+                        {r.description && <span className="rel-item-desc">— {r.description}</span>}
+                      </div>
                       <button className="team-delete-btn" onClick={() => handleDeleteRelationship(r.id)}>删除</button>
                     </div>
                   ))}
@@ -352,8 +355,8 @@ export default function OrganizationDialog({ open, onClose, onOrgChanged, person
               )}
               <div className="add-rel-form">
                 <select value={relFrom} onChange={(e) => setRelFrom(e.target.value)}>
-                  <option value="">角色A</option>
-                  {personas.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="">选择角色</option>
+                  {personas.filter((p) => p.id !== relTo).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select value={relType} onChange={(e) => setRelType(e.target.value)}>
                   <option value="superior">上级</option>
@@ -362,10 +365,10 @@ export default function OrganizationDialog({ open, onClose, onOrgChanged, person
                   <option value="cross_department">跨部门</option>
                 </select>
                 <select value={relTo} onChange={(e) => setRelTo(e.target.value)}>
-                  <option value="">角色B</option>
-                  {personas.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="">选择角色</option>
+                  {personas.filter((p) => p.id !== relFrom).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-                <input type="text" value={relDesc} onChange={(e) => setRelDesc(e.target.value)} placeholder="描述（可选）" style={{ flex: 1 }} />
+                <input type="text" value={relDesc} onChange={(e) => setRelDesc(e.target.value)} placeholder="描述（可选）" />
                 <button onClick={handleAddRelationship} disabled={!relFrom || !relTo || relFrom === relTo}>添加</button>
               </div>
             </>

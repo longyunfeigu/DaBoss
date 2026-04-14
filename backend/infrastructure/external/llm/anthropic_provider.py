@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator, Optional
+import json
+from typing import Any, AsyncIterator, Optional
 
 from anthropic import AsyncAnthropic
 
@@ -97,6 +98,70 @@ class AnthropicProvider:
             total_tokens=response.usage.input_tokens + response.usage.output_tokens,
             finish_reason=response.stop_reason,
         )
+
+    async def generate_structured(
+        self,
+        messages: list[LLMMessage],
+        *,
+        schema: dict,
+        schema_name: str = "output",
+        schema_description: str = "",
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> dict:
+        """Use Anthropic tool_choice to force structured output."""
+        system_content, api_messages = self._split_system_and_messages(messages)
+
+        tool_def = {
+            "name": schema_name,
+            "description": schema_description or f"Output structured data as {schema_name}",
+            "input_schema": schema,
+        }
+
+        kwargs: dict = {
+            "model": model or self._default_model,
+            "messages": api_messages,
+            "temperature": temperature if temperature is not None else self._default_temperature,
+            "max_tokens": max_tokens or self._default_max_tokens,
+            "tools": [tool_def],
+            "tool_choice": {"type": "tool", "name": schema_name},
+        }
+        if system_content:
+            kwargs["system"] = system_content
+
+        response = await self._client.messages.create(**kwargs)
+
+        for block in response.content:
+            if block.type == "tool_use" and block.name == schema_name:
+                result = block.input
+                logger.debug("generate_structured raw input: %s", result)
+                return self._coerce_to_schema(result, schema)
+
+        raise ValueError(f"Model did not return expected tool call '{schema_name}'")
+
+    @staticmethod
+    def _coerce_to_schema(data: Any, schema: dict) -> dict:
+        """Fix type mismatches from proxies that serialize arrays/objects as strings."""
+        if not isinstance(data, dict):
+            return data
+        props = schema.get("properties", {})
+        for key, prop_schema in props.items():
+            if key not in data:
+                continue
+            expected = prop_schema.get("type")
+            val = data[key]
+            if expected == "array" and isinstance(val, str):
+                try:
+                    data[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    data[key] = []
+            elif expected == "object" and isinstance(val, str):
+                try:
+                    data[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    data[key] = {}
+        return data
 
     async def stream(
         self,

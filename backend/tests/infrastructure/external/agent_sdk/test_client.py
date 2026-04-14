@@ -116,6 +116,16 @@ def _make_query_blocks_forever():
     return fake_query
 
 
+def test_build_prompt_tells_agent_to_reuse_existing_output_dir(
+    client: AgentSkillClient,
+) -> None:
+    prompt = client._build_prompt(["meeting transcript"])
+
+    assert "The `output/` directory already exists" in prompt
+    assert "Do NOT create or overwrite the `output/` directory itself" in prompt
+    assert "write exactly one file: `output/persona.md`" in prompt
+
+
 @pytest.mark.asyncio
 async def test_build_persona_yields_adapted_events(client: AgentSkillClient) -> None:
     fake_events = [
@@ -128,12 +138,13 @@ async def test_build_persona_yields_adapted_events(client: AgentSkillClient) -> 
         async for ev in client.build_persona(user_id="alice", materials=["hi"]):
             events.append(ev)
 
-    assert len(events) == 3
-    assert events[0].type == "system"
-    assert events[1].type == "assistant_text"
-    assert events[2].type == "result"
+    assert len(events) == 4
+    assert events[0].type == "workspace_ready"
+    assert events[1].type == "system"
+    assert events[2].type == "assistant_text"
+    assert events[3].type == "result"
     # seq monotonically increasing
-    assert [e.seq for e in events] == [1, 2, 3]
+    assert [e.seq for e in events] == [1, 2, 3, 4]
 
 
 @pytest.mark.asyncio
