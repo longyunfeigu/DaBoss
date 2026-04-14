@@ -33,7 +33,7 @@ def _utcnow() -> datetime:
 @dataclass
 class DefenseSession:
     id: Optional[int]
-    persona_id: str
+    persona_ids: list[str]
     scenario_type: ScenarioType
     document_summary: DocumentSummary
     question_strategy: Optional[QuestionStrategy] = None
@@ -47,6 +47,16 @@ class DefenseSession:
                 f"Invalid defense session status: {self.status}",
                 field="status",
                 details={"allowed": sorted(_VALID_STATUSES)},
+            )
+        if not self.persona_ids:
+            raise DomainValidationException(
+                "至少需要选择一位答辩官",
+                field="persona_ids",
+            )
+        if len(self.persona_ids) > 5:
+            raise DomainValidationException(
+                "最多选择 5 位答辩官",
+                field="persona_ids",
             )
         if self.created_at is None:
             self.created_at = _utcnow()
