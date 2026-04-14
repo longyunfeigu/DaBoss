@@ -41,7 +41,7 @@ _STRATEGY_PROMPT = """\
 
 要求：
 1. 找出文档中数据薄弱、逻辑不严密、结论缺少支撑的地方
-2. 生成 8-12 个问题，按优先级排序
+2. 生成 {question_count} 个问题，按优先级排序
 3. 每个问题标注：目标维度(dimension)、难度(difficulty: basic/advanced/stress_test)、期望回答方向(expected_direction)
 4. 问题应符合你的角色风格和关注点
 """
@@ -121,10 +121,10 @@ class DefensePrepService:
         self._chatroom_service = chatroom_service
         self._persona_loader = persona_loader
 
-    async def create_session(self, file_content: bytes, filename: str, persona_id: str, scenario_type: ScenarioType) -> DefenseSession:
+    async def create_session(self, file_content: bytes, filename: str, persona_ids: list[str], scenario_type: ScenarioType) -> DefenseSession:
         """Step 1: Parse document and create a defense session."""
         summary = await self._parser.parse(file_content, filename)
-        session = DefenseSession(id=None, persona_id=persona_id, scenario_type=scenario_type, document_summary=summary)
+        session = DefenseSession(id=None, persona_ids=persona_ids, scenario_type=scenario_type, document_summary=summary)
         async with self._uow_factory() as uow:
             session = await uow.defense_session_repository.create(session)
             await uow.commit()
@@ -138,16 +138,17 @@ class DefensePrepService:
                 raise ValueError(f"Defense session {session_id} not found")
             strategy = await self._generate_strategy(session)
             session.question_strategy = strategy
-            persona = self._persona_loader.get_persona(session.persona_id)
-            persona_name = persona.name if persona else session.persona_id
+            persona_names = []
+            for pid in session.persona_ids:
+                p = self._persona_loader.get_persona(pid)
+                persona_names.append(p.name if p else pid)
             room = await self._chatroom_service.create_room(
-                CreateChatRoomDTO(name=f"答辩: {persona_name}", type="defense", persona_ids=[session.persona_id])
+                CreateChatRoomDTO(name=f"答辩: {', '.join(persona_names)}", type="defense", persona_ids=session.persona_ids)
             )
             session.start(room_id=room.id)
             await uow.defense_session_repository.update(session)
             await uow.commit()
 
-        # Inject document context as system message + send first question from persona
         config = SCENARIO_CONFIGS[session.scenario_type]
         context_msg = (
             f"[答辩模式] 场景: {config['name']}\n"
@@ -155,7 +156,9 @@ class DefensePrepService:
             f"评估维度: {', '.join(config['dimensions'])}\n\n"
             f"文档摘要:\n{session.document_summary.raw_text[:3000]}"
         )
-        first_q = strategy.questions[0].question if strategy.questions else "请介绍一下这份文档的核心内容。"
+        first_q = strategy.questions[0] if strategy.questions else None
+        first_q_text = first_q.question if first_q else "请介绍一下这份文档的核心内容。"
+        first_q_sender = first_q.asked_by if first_q else session.persona_ids[0]
 
         from domain.stakeholder.entity import Message
         async with self._uow_factory() as uow:
@@ -163,46 +166,72 @@ class DefensePrepService:
                 id=None, room_id=room.id, sender_type="system", sender_id="system", content=context_msg,
             ))
             await uow.stakeholder_message_repository.create(Message(
-                id=None, room_id=room.id, sender_type="persona", sender_id=session.persona_id, content=first_q,
+                id=None, room_id=room.id, sender_type="persona", sender_id=first_q_sender, content=first_q_text,
             ))
             await uow.commit()
 
         return session
 
     async def _generate_strategy(self, session: DefenseSession) -> QuestionStrategy:
-        persona = self._persona_loader.get_persona(session.persona_id)
         config = SCENARIO_CONFIGS[session.scenario_type]
-        role = persona.role if persona else "上级领导"
-        tone = ""
-        typical_questions = ""
-        if persona:
-            if persona.expression:
-                tone = persona.expression.tone
-            if persona.decision:
-                typical_questions = ", ".join(persona.decision.typical_questions[:5])
-        prompt = _STRATEGY_PROMPT.format(
-            role=role, tone=tone or "专业严谨",
-            typical_questions=typical_questions or "（无特定追问）",
-            scenario_name=config["name"],
-            document_text=session.document_summary.raw_text[:8000],
-            dimensions=", ".join(config["dimensions"]),
-            question_angles="\n".join(f"- {a}" for a in config["question_angles"]),
-        )
-        messages = [LLMMessage(role="user", content=prompt)]
-        try:
-            parsed = await self._llm.generate_structured(
-                messages, schema=_STRATEGY_SCHEMA,
-                schema_name="defense_question_strategy",
-                schema_description="生成答辩提问策略", temperature=0.4,
+        n = len(session.persona_ids)
+        questions_per_persona = max(3, 12 // n)
+
+        all_questions: list[PlannedQuestion] = []
+        for pid in session.persona_ids:
+            persona = self._persona_loader.get_persona(pid)
+            role = persona.role if persona else "上级领导"
+            tone = ""
+            typical_questions = ""
+            if persona:
+                if persona.expression:
+                    tone = persona.expression.tone
+                if persona.decision:
+                    typical_questions = ", ".join(persona.decision.typical_questions[:5])
+            prompt = _STRATEGY_PROMPT.format(
+                role=role, tone=tone or "专业严谨",
+                typical_questions=typical_questions or "（无特定追问）",
+                scenario_name=config["name"],
+                document_text=session.document_summary.raw_text[:8000],
+                dimensions=", ".join(config["dimensions"]),
+                question_angles="\n".join(f"- {a}" for a in config["question_angles"]),
+                question_count=questions_per_persona,
             )
-        except Exception as exc:
-            logger.error("LLM strategy generation failed: %s", exc)
-            raise ValueError("提问策略生成失败，请重试") from exc
-        questions = [
-            PlannedQuestion(question=q.get("question", ""), dimension=q.get("dimension", ""), difficulty=q.get("difficulty", "basic"), expected_direction=q.get("expected_direction", ""))
-            for q in parsed.get("questions", [])
-        ]
-        return QuestionStrategy(questions=questions)
+            messages = [LLMMessage(role="user", content=prompt)]
+            try:
+                parsed = await self._llm.generate_structured(
+                    messages, schema=_STRATEGY_SCHEMA,
+                    schema_name="defense_question_strategy",
+                    schema_description="生成答辩提问策略", temperature=0.4,
+                )
+            except Exception as exc:
+                logger.error("LLM strategy generation failed for persona %s: %s", pid, exc)
+                raise ValueError("提问策略生成失败，请重试") from exc
+            for q in parsed.get("questions", [])[:questions_per_persona]:
+                all_questions.append(PlannedQuestion(
+                    question=q.get("question", ""),
+                    dimension=q.get("dimension", ""),
+                    difficulty=q.get("difficulty", "basic"),
+                    expected_direction=q.get("expected_direction", ""),
+                    asked_by=pid,
+                ))
+
+        interleaved = self._interleave_by_dimension(all_questions)
+        return QuestionStrategy(questions=interleaved)
+
+    def _interleave_by_dimension(self, questions: list[PlannedQuestion]) -> list[PlannedQuestion]:
+        """Group by dimension, then round-robin within each group to alternate personas."""
+        from collections import defaultdict
+        by_dim: dict[str, list[PlannedQuestion]] = defaultdict(list)
+        dim_order: list[str] = []
+        for q in questions:
+            if q.dimension not in dim_order:
+                dim_order.append(q.dimension)
+            by_dim[q.dimension].append(q)
+        result: list[PlannedQuestion] = []
+        for dim in dim_order:
+            result.extend(by_dim[dim])
+        return result
 
     async def get_session(self, session_id: int) -> Optional[DefenseSession]:
         async with self._uow_factory(readonly=True) as uow:
