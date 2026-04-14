@@ -27,6 +27,7 @@ class PlannedQuestion:
     dimension: str
     difficulty: str = "basic"
     expected_direction: str = ""
+    asked_by: str = ""
 
 
 @dataclass
