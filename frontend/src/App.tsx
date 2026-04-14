@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout'
 import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
 import BattlePrepPage from './pages/BattlePrepPage'
+import DefensePrepPage from './pages/DefensePrepPage'
 import GrowthPage from './pages/GrowthPage'
 import SettingsPage from './pages/SettingsPage'
 import PersonaBuilderPage from './pages/PersonaBuilderPage'
@@ -18,6 +19,7 @@ function App() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:roomId" element={<ChatPage />} />
           <Route path="battle-prep" element={<BattlePrepPage />} />
+          <Route path="defense-prep" element={<DefensePrepPage />} />
           <Route path="growth" element={<GrowthPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="persona/new" element={<PersonaBuilderPage />} />

@@ -8,6 +8,7 @@ import {
   Check,
   Lock,
   ChevronRight,
+  FileText,
 } from 'lucide-react'
 import { useAppContext } from '../contexts/AppContext'
 import { fetchRooms, type ChatRoom } from '../services/api'
@@ -125,6 +126,22 @@ const HomePage: React.FC = () => {
             <span className="home-action-title">30 分钟快速演练</span>
             <span className="home-action-desc">
               针对即将到来的重要会议，进行高强度模拟对练
+            </span>
+          </div>
+        </Link>
+
+        {/* Defense Prep */}
+        <Link to="/defense-prep" className="home-action-card home-action-card--violet">
+          <div className="home-action-icon home-action-icon--violet">
+            <FileText size={18} />
+          </div>
+          <div className="home-action-text">
+            <span className="home-action-label home-action-label--violet">
+              答辩准备
+            </span>
+            <span className="home-action-title">模拟答辩演练</span>
+            <span className="home-action-desc">
+              上传文档，AI 生成针对性问题并模拟答辩场景
             </span>
           </div>
         </Link>
