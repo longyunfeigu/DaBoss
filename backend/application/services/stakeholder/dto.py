@@ -1,5 +1,5 @@
 # input: Pydantic BaseModel
-# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO, PersonaBuildRequestDTO (Story 2.5), PersonaV2DTO/PersonaPatchV2DTO + 5-layer sub-DTOs (Story 2.7)
+# output: CreateChatRoomDTO, ChatRoomDTO, ChatRoomDetailDTO, SendMessageDTO, CreatePersonaDTO(含 organization_id/team_id), UpdatePersonaDTO(含 organization_id/team_id), CreateScenarioDTO, ScenarioDTO, UpdateScenarioDTO, AnalysisReportDTO, AnalysisReportSummaryDTO, AnalysisContentDTO, Organization/Team/Relationship DTOs, Growth/Competency DTOs, BattlePrepGenerateDTO, BattlePrepResultDTO, StartBattleDTO, CheatSheetDTO, ProfileCardDTO, PersonaBuildRequestDTO (Story 2.5), PersonaV2DTO/PersonaPatchV2DTO + 5-layer sub-DTOs (Story 2.7), CreateDefenseSessionDTO, DefenseSessionDTO, DefenseReportDTO
 # owner: wanhua.gu
 # pos: 应用层 - 聊天室、消息、角色、场景数据传输对象；一旦我被更新，务必更新我的开头注释以及所属文件夹的md
 """DTOs for stakeholder chat room and message operations."""
@@ -16,7 +16,7 @@ class CreateChatRoomDTO(BaseModel):
     """Input DTO for creating a chat room."""
 
     name: str = Field(..., min_length=1, max_length=255)
-    type: str = Field(..., pattern=r"^(private|group|battle_prep)$")
+    type: str = Field(..., pattern=r"^(private|group|battle_prep|defense)$")
     persona_ids: list[str] = Field(..., min_length=1)
     scenario_id: Optional[int] = None
 
@@ -597,3 +597,35 @@ class PersonaPatchV2DTO(BaseModel):
     interpersonal: Optional[InterpersonalDTO] = None
     user_context: Optional[str] = None
     rejected_features: Optional[dict[str, list[int]]] = None
+
+
+# ---------------------------------------------------------------------------
+# Defense Prep DTOs
+# ---------------------------------------------------------------------------
+
+
+class CreateDefenseSessionDTO(BaseModel):
+    """Input: upload document + choose persona + scenario."""
+    persona_id: str = Field(..., min_length=1)
+    scenario_type: str = Field(..., pattern=r"^(performance_review|proposal_review|project_report|general)$")
+
+
+class DefenseSessionDTO(BaseModel):
+    """Output: defense session summary."""
+    model_config = {"from_attributes": True}
+    id: int
+    persona_id: str
+    scenario_type: str
+    document_title: str
+    status: str
+    room_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+
+
+class DefenseReportDTO(BaseModel):
+    """Output: final evaluation report."""
+    overall_score: float
+    dimension_scores: dict[str, float]
+    question_reviews: list[dict]
+    summary: str
+    top_improvements: list[str]
