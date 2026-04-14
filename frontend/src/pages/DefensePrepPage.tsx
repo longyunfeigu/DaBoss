@@ -23,7 +23,7 @@ function initialState() {
   return {
     step: 1 as 1 | 2,
     file: null as File | null,
-    selectedPersonaId: '',
+    selectedPersonaIds: [] as string[],
     scenarioType: '',
     loading: false,
     error: null as string | null,
@@ -42,7 +42,7 @@ export default function DefensePrepPage() {
   const {
     step,
     file,
-    selectedPersonaId,
+    selectedPersonaIds,
     scenarioType,
     loading,
     error,
@@ -78,16 +78,11 @@ export default function DefensePrepPage() {
 
   // ---- Step 1: upload and create session ----
   const handleUpload = async () => {
-    if (!file || !selectedPersonaId || !scenarioType) return
+    if (!file || selectedPersonaIds.length === 0 || !scenarioType) return
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const sess = await createDefenseSession(file, selectedPersonaId, scenarioType)
-      setState((s) => ({
-        ...s,
-        loading: false,
-        session: sess,
-        step: 2,
-      }))
+      const sess = await createDefenseSession(file, selectedPersonaIds, scenarioType)
+      setState((s) => ({ ...s, loading: false, session: sess, step: 2 }))
     } catch (e: any) {
       setState((s) => ({ ...s, loading: false, error: e.message || '创建失败，请重试' }))
     }
@@ -109,7 +104,7 @@ export default function DefensePrepPage() {
     }
   }
 
-  const selectedPersona = selectedPersonaId ? personaMap[selectedPersonaId] : null
+  const selectedPersonaNames = selectedPersonaIds.map(id => personaMap[id]?.name ?? id).join('、')
   const selectedScenario = SCENARIO_OPTIONS.find((o) => o.value === scenarioType)
   const questions = session?.question_strategy?.questions ?? []
 
@@ -184,19 +179,29 @@ export default function DefensePrepPage() {
             />
 
             {/* Persona selection */}
-            <div className="dp-section-label">选择答辩官</div>
-            <select
-              className="dp-select"
-              value={selectedPersonaId}
-              onChange={(e) => setState((s) => ({ ...s, selectedPersonaId: e.target.value }))}
-            >
-              <option value="">请选择答辩官...</option>
+            <div className="dp-section-label">选择答辩官（最多 5 位）</div>
+            <div className="dp-multi-select">
               {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.role}
-                </option>
+                <label key={p.id} className={`dp-multi-option ${selectedPersonaIds.includes(p.id) ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPersonaIds.includes(p.id)}
+                    onChange={() => {
+                      setState((s) => {
+                        const ids = s.selectedPersonaIds.includes(p.id)
+                          ? s.selectedPersonaIds.filter((x) => x !== p.id)
+                          : s.selectedPersonaIds.length < 5
+                            ? [...s.selectedPersonaIds, p.id]
+                            : s.selectedPersonaIds
+                        return { ...s, selectedPersonaIds: ids }
+                      })
+                    }}
+                  />
+                  <span className="dp-multi-option-name">{p.name}</span>
+                  <span className="dp-multi-option-role">{p.role}</span>
+                </label>
               ))}
-            </select>
+            </div>
 
             {/* Scenario selection */}
             <div className="dp-section-label">答辩场景</div>
@@ -220,7 +225,7 @@ export default function DefensePrepPage() {
               <button
                 className="dp-btn-primary"
                 onClick={handleUpload}
-                disabled={!file || !selectedPersonaId || !scenarioType || loading}
+                disabled={!file || selectedPersonaIds.length === 0 || !scenarioType || loading}
               >
                 {loading ? (
                   <span className="dp-loading-inline">
@@ -251,7 +256,7 @@ export default function DefensePrepPage() {
               </div>
               <div className="dp-summary-row">
                 <span className="dp-summary-label">答辩官</span>
-                <span className="dp-summary-value">{selectedPersona?.name ?? session.persona_id}</span>
+                <span className="dp-summary-value">{selectedPersonaNames}</span>
               </div>
               <div className="dp-summary-row">
                 <span className="dp-summary-label">场景</span>

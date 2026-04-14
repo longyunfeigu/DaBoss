@@ -722,14 +722,14 @@ export interface PersonaBuildRequest {
 
 export interface DefenseSession {
   id: number
-  persona_id: string
+  persona_ids: string[]
   scenario_type: string
   document_title: string
   status: 'preparing' | 'in_progress' | 'completed'
   room_id: number | null
   created_at: string | null
   question_strategy?: {
-    questions: { question: string; dimension: string; difficulty: string }[]
+    questions: { question: string; dimension: string; difficulty: string; asked_by: string }[]
   }
 }
 
@@ -747,10 +747,10 @@ export interface DefenseReport {
   top_improvements: string[]
 }
 
-export async function createDefenseSession(file: File, personaId: string, scenarioType: string): Promise<DefenseSession> {
+export async function createDefenseSession(file: File, personaIds: string[], scenarioType: string): Promise<DefenseSession> {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('persona_id', personaId)
+  formData.append('persona_ids', personaIds.join(','))
   formData.append('scenario_type', scenarioType)
   const resp = await fetch(`/api/v1/defense-prep/sessions`, { method: 'POST', body: formData })
   if (!resp.ok) {
