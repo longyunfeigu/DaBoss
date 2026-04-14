@@ -323,3 +323,25 @@ def get_persona_v2_service():
     from application.services.stakeholder.persona_v2_service import PersonaV2Service
 
     return PersonaV2Service(uow_factory=SQLAlchemyUnitOfWork)
+
+
+# ---------------------------------------------------------------------------
+# Defense Prep dependencies
+# ---------------------------------------------------------------------------
+
+
+async def get_defense_prep_service(
+    loader: PersonaLoader = Depends(get_persona_loader_with_v2),
+    llm: LLMPort = Depends(get_stakeholder_llm_port),
+    chatroom_svc: ChatRoomApplicationService = Depends(get_chatroom_service),
+):
+    from application.services.defense_prep_service import DefensePrepService
+    from infrastructure.external.document_parser.parser import FileDocumentParser
+
+    return DefensePrepService(
+        uow_factory=SQLAlchemyUnitOfWork,
+        llm=llm,
+        document_parser=FileDocumentParser(),
+        chatroom_service=chatroom_svc,
+        persona_loader=loader,
+    )

@@ -17,6 +17,7 @@ from api.routes import files as files_routes
 from api.routes import health as health_routes
 from api.routes import metrics as metrics_routes
 from api.routes import stakeholder as stakeholder_routes
+from api.routes.defense_prep import router as defense_prep_router
 from api.routes import storage as storage_routes
 from core.config import settings
 from core.exceptions import register_exception_handlers
@@ -203,6 +204,7 @@ app.include_router(files_routes.router, prefix="/api/v1")
 app.include_router(conversations_routes.router, prefix="/api/v1")
 app.include_router(chat_routes.router, prefix="/api/v1")
 app.include_router(stakeholder_routes.router, prefix="/api/v1")
+app.include_router(defense_prep_router, prefix="/api/v1")
 app.include_router(health_routes.router)
 app.include_router(metrics_routes.router)
 
