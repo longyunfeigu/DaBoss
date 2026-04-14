@@ -19,7 +19,7 @@ _ALLOWED_EXTENSIONS = {".pptx", ".pdf", ".docx", ".txt", ".md"}
 @router.post("/sessions")
 async def create_session(
     file: UploadFile = File(...),
-    persona_id: str = Form(...),
+    persona_ids: str = Form(...),  # comma-separated
     scenario_type: str = Form(...),
     service: DefensePrepService = Depends(get_defense_prep_service),
 ):
@@ -34,9 +34,22 @@ async def create_session(
         st = ScenarioType(scenario_type)
     except ValueError:
         raise HTTPException(400, f"无效的场景类型: {scenario_type}")
-    session = await service.create_session(file_content=content, filename=file.filename or "document", persona_id=persona_id, scenario_type=st)
+
+    # Parse and validate persona_ids
+    pid_list = [p.strip() for p in persona_ids.split(",") if p.strip()]
+    if not pid_list:
+        raise HTTPException(400, "至少需要选择一位答辩官")
+    if len(pid_list) > 5:
+        raise HTTPException(400, "最多选择 5 位答辩官")
+    if len(pid_list) != len(set(pid_list)):
+        raise HTTPException(400, "答辩官不能重复选择")
+
+    session = await service.create_session(
+        file_content=content, filename=file.filename or "document",
+        persona_ids=pid_list, scenario_type=st,
+    )
     return success_response({
-        "id": session.id, "persona_id": session.persona_id,
+        "id": session.id, "persona_ids": session.persona_ids,
         "scenario_type": session.scenario_type.value,
         "document_title": session.document_summary.title,
         "status": session.status,
@@ -50,7 +63,7 @@ async def get_session(session_id: int, service: DefensePrepService = Depends(get
     if session is None:
         raise HTTPException(404, "会话不存在")
     data = {
-        "id": session.id, "persona_id": session.persona_id,
+        "id": session.id, "persona_ids": session.persona_ids,
         "scenario_type": session.scenario_type.value,
         "document_title": session.document_summary.title,
         "status": session.status, "room_id": session.room_id,
@@ -58,7 +71,10 @@ async def get_session(session_id: int, service: DefensePrepService = Depends(get
     }
     if session.question_strategy:
         data["question_strategy"] = {
-            "questions": [{"question": q.question, "dimension": q.dimension, "difficulty": q.difficulty} for q in session.question_strategy.questions]
+            "questions": [
+                {"question": q.question, "dimension": q.dimension, "difficulty": q.difficulty, "asked_by": q.asked_by}
+                for q in session.question_strategy.questions
+            ]
         }
     return success_response(data)
 
@@ -72,7 +88,10 @@ async def start_session(session_id: int, service: DefensePrepService = Depends(g
     return success_response({
         "id": session.id, "room_id": session.room_id, "status": session.status,
         "question_strategy": {
-            "questions": [{"question": q.question, "dimension": q.dimension, "difficulty": q.difficulty} for q in (session.question_strategy.questions if session.question_strategy else [])]
+            "questions": [
+                {"question": q.question, "dimension": q.dimension, "difficulty": q.difficulty, "asked_by": q.asked_by}
+                for q in (session.question_strategy.questions if session.question_strategy else [])
+            ]
         },
     })
 
